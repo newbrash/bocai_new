@@ -1,0 +1,644 @@
+<template>
+  <div class="odds-main">
+    <!-- 玩法提示 -->
+    <div @click="$emit('ruleModalShow')"
+         class="odds-right-tips">玩法提示<span class="iconfont icon-htbarrowright02"></span></div>
+
+    <div v-if="betsOdds"
+         class="odds-left-tips">赔率: <span class="font-theme">{{betsOdds|filter_toFixed(3)}}</span></div>
+
+    <!-- 有头部的1-9 -->
+    <template v-if="numWithHeader">
+      <div v-if="postionAny"
+           class="flex num-postionAny">
+        <span class="fontc-0">位置：</span>
+        <label v-for="item in ['万位','千位','百位','十位','个位']"
+               class="flex checkbox-item"><input class="dent-checkbox"
+                 :value="item"
+                 v-model="nwhModel[0]"
+                 type="checkbox">{{item}}</label>
+      </div>
+      <div v-for="num in nwhShouldRender"
+           :class="nwhShouldRender.length === 1 ? 'nwh-no-tips':''"
+           class="odds odds-num bgc-fff">
+        <!-- 玩法的名称 -->
+        <div class="nwh-tips fz-12">{{nwhName(num)}}</div>
+        <!-- 头部 -->
+        <div @click="autoSelect($event,num)"
+             class="odds-nwh-header flex justify-sb">
+          <span v-for='(item,index) in ["全","大","小","单","双","清"]'
+                :data-key="item"
+                dentHoverclass="hoverclass">{{item}}</span>
+        </div>
+        <!-- 号码 -->
+        <div class="flex pk-nwh-wrap">
+          <label v-for="n in 10"
+                 class="showAllNum-item nwh-item">
+            <input type="checkbox"
+                   :value="n-1"
+                   v-model="nwhModel[num]"
+                   class="dent-bg-input hidden">
+            <div class="bg flex flow-col justify-ct odds-bets">{{n-1}}</div>
+          </label>
+        </div>
+      </div>
+    </template>
+
+    <!-- 显示 玩法名称和文字球-->
+    <div v-if="showBallText"
+         class="odds bgc-fff">
+
+      <div class="odds-item-wrap flex"
+           v-for="num in sbtShouldRepeat">
+        <span class="odds-item-title fontc-6 fz-12">{{showBallTips(num-1) | keyToCharacter}}</span>
+        <div class="flex showBallText">
+          <label v-for="(objvalue,objkey) in sbtShouldRender"
+                 class="odds-item showAllNum-item showBallText-item">
+            <input type="checkbox"
+                   :value="objvalue"
+                   v-model="nwhModel[num -1 ]"
+                   class="dent-bg-input hidden">
+            <div class="bg flex flow-col justify-ct odds-bets">{{objkey | keyToCharacter}}</div>
+          </label>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 手动选号 -->
+    <div v-if="handy"
+         class="odds bgc-fff">
+      <!-- @focus="textareaFocus=true"
+      @blur="textareaFocus=false"
+      :class="textareaFocus?'odds-textarea-focus':''" -->
+      <div class="odds-textarea-wrap">
+        <div v-if="postionAny"
+             class="flex postionAny">
+          <span class="fontc-0">位置：</span>
+          <label v-for="item in ['万位','千位','百位','十位','个位']"
+                 class="flex checkbox-item"><input class="dent-checkbox"
+                   type="checkbox">{{item}}</label>
+        </div>
+
+        <textarea v-model="textareaValue"
+                  class="odds-textarea"
+                  placeholder="请手动输入号码">
+        </textarea>
+      </div>
+      <p class="textarea-tips fontc-9">每一注号码之间请用逗号[,]、空格[ ]、或者 换行 隔开。</p>
+    </div>
+    <!-- 显示 块 号码和赔率 -->
+    <div v-if="normal"
+         class="odds odds-normal flex bgc-fff">
+
+      <label v-for="(objValue,objKey) in betsObj"
+             class="odds-item">
+        <!-- 正常情况下 展示的值和绑定到value的是同一个值-->
+        <input type="checkbox"
+               :value="objKey"
+               v-model="value"
+               class="dent-bg-input hidden">
+        <div class="bg flex flow-col justify-ct">
+          <span class="odds-bets">{{objKey | keyToCharacter}}</span>
+          <span class="font-theme">赔率:{{objValue}}</span>
+        </div>
+      </label>
+
+    </div>
+    <!-- 显示 数字球 -->
+    <div v-if="showBallNum"
+         class="odds flex bgc-fff">
+
+      <label v-for="n in sbnShouldRender"
+             class="odds-item showNumAndOdds-item">
+        <input type="checkbox"
+               :value="n"
+               v-model="value"
+               class="dent-bg-input hidden">
+        <div class="bg flex flow-col justify-ct odds-bets">{{n-1}}</div>
+      </label>
+
+    </div>
+
+  </div>
+</template>
+
+<script>
+// import { bjpk10 } from '@/js/keyToCharacter';
+export default {
+  // filters:{
+  //   keyToCharacter(val){
+  //     if(val.match('_')) return val.split('_')[1];
+  //     return bjpk10[val];
+  //   }
+  // },
+  props: {
+    betsObj: [Array,Object],  //需要渲染的对象或者数组
+    currentOdds: String, //当前的子玩法 用来切换不同的赔率展示方式
+    value: Array, //value 用来接受v-model传进来的值
+  },
+  data() {
+    return{
+      /* 数据 */
+      textareaValue:'', //手动选号绑定的model
+      nwhModel:{0:[], 1:[], 2:[], 3:[], 4:[]},  //v-model
+
+      /* 状态 */
+      numWithHeader:false,
+      normal:false,
+      handy:false,
+      showBallText:false,
+      showBallNum:false,
+      postionAny:false,
+      textareaFocus:false,
+    }
+  },
+  computed:{
+
+    //numWithHeader 带头部的1-9 要渲染的
+    nwhShouldRender(){
+      let nwhShouldRender;
+      let {currentOdds, numWithHeader} = this;
+      if( !numWithHeader ) return;
+      let temp = [
+        [/zuxuan(60|30|20|10|5|12|4)$|^erxin-qianerzhixuan-fushi$/,[0,1]],  //显示 万千 五星组选 60 30 20 10 5, 四星组选 12 6 4,  前二直选 复式
+        [/^sixin-qiansizhixuan$/,[0,1,2,3]],  //显示 万千百十 四星直选 复式 组合
+        [/^wuxin-zhixuan|^sixin-qiansizhixuan-(fushi|zuhe)$|renxuan-rener-fushi$|dindanwei/,[0,1,2,3,4]],  //显示 万千百十个 五星直选 复式 组合, 四星复式 组合, 任二 复式, 定位胆
+
+        [/^sanxin-housanzhixuan-fushi$/,[2,3,4]], //显示 百十个 后三直选
+        [/^sanxin-zhongsanzhixuan-fushi$/,[1,2,3]], //显示 千百十 中三直选
+        [/^sanxin-qiansanzhixuan-fushi$/,[0,1,2]], //显示 万千百 前三直选
+        [/^erxin-houerzhixuan-fushi$/,[3,4]], //显示十位和个位 二星直选复式
+
+        [/^renxuan-\S+(zuxuan|zusan|zuliu)$/,[1]], //任二 组选, 任三 组三 组六,
+
+        //默认显示 万位
+        //五星组选 120 5，四星组选 24, 趣味所有玩法, 不定位所有玩法
+        //二星组选复式, 二星 三星直选跨度,  三星 组三 组六
+        ['',[0]],
+      ]
+
+      temp.every(arrayLike => {
+        if( new RegExp(arrayLike[0]).test( currentOdds ) ) {
+          nwhShouldRender = arrayLike[1];
+          return false;
+        }else{
+          return true;
+        }
+      })
+
+      return nwhShouldRender;
+    },
+
+    //showBalltext 玩法名称和文字球 应该渲染的数组
+    sbtShouldRender (){
+      let sbtShouldRender;
+      let {currentOdds, showBallText} = this;
+      if( !showBallText ) return;
+
+      let temp = [
+        [/^daxiaodanshuang/, {da:"da",xiao:"xiao",dan:"dan",shuang:"shuang"}], //大小单双 所有玩法
+        [/^(sanxin|erxin)\S+(?=zuxuanbaodan)/, 10], //二星 三星 组选包胆
+      ];
+
+      temp.every(arrayLike => {
+        if( new RegExp(arrayLike[0]).test( currentOdds ) ) {
+          sbtShouldRender = arrayLike[1];
+          return false;
+        }else{
+          return true;
+        }
+      })
+
+      return sbtShouldRender;
+    },
+    //showBalltext 玩法名称和文字球 应该渲染的次数
+    sbtShouldRepeat(){
+      // 大小单双串关
+      let ifFive = this.currentOdds === "daxiaodanshuang-chuangguan-chuangguan";
+
+      return ifFive ? 5 : 1;
+    },
+
+    //showBallNum 显示数字球应该渲染
+    sbnShouldRender(){
+      let sbnShouldRender;
+      let {currentOdds, showBallNum} = this;
+      if( !showBallNum ) return;
+      let temp = [
+        [/^erxin\S+(?=zhixuanhezhi)/, 19], //二星 名字带 直选和值 的玩法
+        [/^sanxin\S+(?=zhixuanhezhi)/, 28], //三星 名字带 直选和值 的玩法
+        [/^(erxin|sanxin)\S+(?=heshiweishu)/, 10], //二星 三星 名字带 和值尾数 的玩法
+      ]
+
+      temp.every(arrayLike => {
+        if( new RegExp(arrayLike[0]).test( currentOdds ) ) {
+          sbnShouldRender = arrayLike[1];
+          return false;
+        }else{
+          return true;
+        }
+      })
+
+      return sbnShouldRender;
+    },
+
+    //betsOdds 当前玩法的赔率
+    betsOdds(){
+      return typeof(this.betsObj) === "object" ? false : this.betsObj;
+    }
+
+  },
+  methods:{
+
+    //nwhName的玩法名称
+    nwhName(nwhindex){
+      let currentOdds = this.currentOdds;
+      let nwhName = {0:"万位",1:"千位",2:"百位",3:"十位",4:"个位"};
+
+      if( new RegExp(/^sixin\S+(?=zuxuan12)|^wuxin-wuxinzuxuan-zuxuan(60|30)$/).test( currentOdds ) ) {
+        // 四星组选12 五星组选60 30
+        nwhName = {0:'二重号',1:'单号'}
+      }
+
+      if( new RegExp(/^sixin\S+(?=zuxuan4)|^wuxin-wuxinzuxuan-zuxuan20$/).test( currentOdds ) ) {
+        // 四星组选4 星组选20
+        nwhName = {0:'三重号',1:'单号'}
+      }
+
+      if( currentOdds === "wuxin-wuxinzuxuan-zuxuan10" ) {
+        // 五星组选10
+        nwhName = {0:'三重号',1:'二重号'}
+      }
+
+      if( currentOdds === "wuxin-wuxinzuxuan-zuxuan5" ) {
+        // 五星组选5
+        nwhName = {0:'四重号',1:'单号'}
+      }
+
+      return nwhName[nwhindex];
+    },
+
+    //小玩法名字
+    showBallTips(index){
+      if( this.currentOdds === "daxiaodanshuang-chuangguan-chuangguan" ) {
+        //大小单双 串关的玩法名字 从nwhName中取
+        return this.nwhName(index);
+      }
+
+      //从玩法名字中截取 name
+      let [type,leixin,name] = this.currentOdds.split('-');
+      return name;
+    },
+
+    //
+    autoSelect(event,nwhModelIndex){
+      let temp = {
+        "全":[0,1,2,3,4,5,6,7,8,9],
+        "大":[5,6,7,8,9],
+        "小":[0,1,2,3,4],
+        "单":[1,3,5,7,9],
+        "双":[0,2,4,6,8],
+        "清":[]
+      }
+
+      let tempKey = event.target.dataset.key;
+      let newArray = temp[tempKey];
+      this.$set( this.nwhModel, nwhModelIndex, newArray )
+    }
+
+  },
+  watch: {
+    //value，向外部派发下注的信息
+    value(value) {
+      if( value === 'reset' ){
+        //重置下注信息
+        this.$nextTick(() => {
+          if( this.numWithHeader || this.showBallText) {
+              this.nwhModel = {0:[], 1:[], 2:[], 3:[], 4:[]};
+          }else {
+            this.value = [];
+          }
+        })
+      }else{
+        this.$emit('input',value);
+      }
+    },
+
+    //nwhModel 定位胆向外部派发信息
+    nwhModel:{
+      handler(nwhModel){
+        this.value = nwhModel;
+      },
+      deep:true
+    },
+
+    //把用户输入的字符 截取成后台需要的格式
+    textareaValue(val){
+      if(val === ''){
+        this.value = [];
+        return;
+      };
+      let currentOdds = this.currentOdds;
+      //  /([1-6]+)(?=\s|,|\n|$)/g 正则匹配 除了0之外 并且以 空格 逗号 换行符 分割的数字
+      let regArray = val.match(/([0-9]+)(?=\s|,|，|\n|$)/g);
+      let tempArray = regArray && regArray.filter( num => {
+        let numLength;
+        switch( currentOdds ){
+          case "wuxin-zhixuan-danshi":
+              return minLength.call(this,5);
+            break;
+        }
+
+        function minLength(minlength) {
+          numLength = String(num).length === minlength;
+          return numLength && num;
+        }
+      });
+
+      let array = Array.from(new Set(tempArray)); //去重
+      this.value = array;
+    },
+
+    //currentOdds 根据传递进来的玩法 切换不同的显示结构
+    currentOdds:{
+      handler(currentOdds) {
+        //显示 有头部的 1-9 号码
+        // 五星 四星 除了单式的所有玩法^(sixin|wuxin)\S+(?<!danshi)$
+        //趣味所有玩法 qvwei
+        //任选除了单式和混合组选的所有玩法 ^renxuan\S+(?<!danshi|hunhezuxuan)$
+        //不定位所有玩法 budinwei
+        //定位胆 dindanwei
+        //二星 三星 名字带复式和直选跨度的玩法 ^(erxin|sanxin)\S+(?=fushi|zhixuankuadu)
+        //三星 名字带 组三 组六的玩法 ^sanxin\S+(?=zusan|zuliu)
+        let numWithHeader = new RegExp(/^(sixin|wuxin)\S+(?<!danshi)$|^renxuan\S+(?<!danshi|hunhezuxuan)$|^(erxin|sanxin)\S+(?=fushi|zhixuankuadu)|^sanxin\S+(?=zusan|zuliu)|(budinwei|qvwei|dindanwei)/);
+
+        //显示 玩法名称和文字球
+        //大小单式所有玩法  daxiaodanshuang
+        //二星 三星 名字带组选包胆的玩法 ^(erxin|sanxin)\S+(?=zuxuanbaodan)
+        let showBallText = new RegExp(/^daxiaodanshuang|^(erxin|sanxin)\S+(?=zuxuanbaodan)/);
+
+        //显示 块 号码和赔率
+        //斗牛 特殊号 龙虎所有玩法
+        let normal = new RegExp(/douniu|teshuhao|longhu/);
+
+        //位置任选
+        //任选除了 任二复式
+        let postionAny = new RegExp(/^renxuan\S+(?<!fushi)$/);
+
+
+        //手动选号  名字带单式和混合组选的玩法 danshi hunhezuxuan
+        let handy =  new RegExp(/danshi|hunhezuxuan/);
+
+        //显示 数字球
+        //二星 名字带 直选和值和和值尾数的玩法 ^(erxin|sanxin)\S+(?=fushi|zhixuankuadu)
+        let showBallNum =  new RegExp(/^(erxin|sanxin)\S+(?=zhixuanhezhi|heshiweishu)/);
+
+        this.numWithHeader = numWithHeader.test(currentOdds);
+        this.showBallText = showBallText.test(currentOdds);
+        this.normal = normal.test(currentOdds);
+        this.postionAny = postionAny.test(currentOdds);
+        this.handy = handy.test(currentOdds);
+        this.showBallNum = showBallNum.test(currentOdds);
+
+      },
+      immediate: true
+    }
+  }
+}
+</script>
+
+<style scoped>
+.hoverclass {
+  background: rgba(230, 70, 0, 0.1);
+}
+/* 下注信息展示区 */
+.odds-main {
+  flex: 1;
+  position: relative;
+  padding-top: 12vw;
+  width: 100%;
+  overflow: auto;
+}
+.odds-right-tips,
+.odds-left-tips {
+  position: absolute;
+  z-index: 1;
+  top: 3vw;
+  padding: 0 2vw;
+  background: #f4f6f9;
+  color: #7f8baa;
+  line-height: 6vw;
+}
+.odds-right-tips {
+  right: 0;
+  border-top-left-radius: 3vw;
+  border-bottom-left-radius: 3vw;
+}
+.odds-right-tips .iconfont {
+  font-size: 3.46vw;
+}
+.odds-left-tips {
+  left: 0;
+  border-top-right-radius: 3vw;
+  border-bottom-right-radius: 3vw;
+}
+.odds {
+  flex: 1;
+  flex-wrap: wrap;
+  line-height: 1.6;
+}
+.odds-normal {
+  padding-right: 6vw;
+}
+.odds-item-wrap {
+  margin-bottom: 5vw;
+}
+/*手动选号 */
+.odds-textarea-wrap {
+  position: relative;
+  margin: 2.133vw;
+  padding: 2.133vw;
+  background: #f6f9fc;
+  border: 1px solid #dadee4;
+}
+.odds-textarea-wrap .postionAny {
+  margin-bottom: 2.133vw;
+}
+.odds-textarea {
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+  padding: 2.133vw;
+  width: 100%;
+  height: 57.534vw;
+  background: #fdfdfd;
+  border: 1px solid #dadee4;
+  vertical-align: middle;
+  caret-color: #e64600;
+  outline: none;
+  resize: none;
+}
+.odds-textarea-focus {
+  height: auto;
+}
+.textarea-tips {
+  text-align: left;
+  text-indent: 2.133vw;
+}
+.odds-item {
+  margin-left: 6vw;
+  width: calc(100% / 3 - 6vw);
+  height: 14vw;
+  box-sizing: border-box;
+}
+.odds-normal .odds-item {
+  margin-bottom: 6vw;
+}
+.showBallText {
+  flex-wrap: wrap;
+  margin-bottom: -6vw;
+}
+.showAllNum-item {
+  margin-left: 30px;
+  width: 28px;
+  height: 28px;
+  background: #f7f9fa;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.showBallText-item {
+  margin-left: 6vw;
+  margin-bottom: 6vw;
+}
+.showNumAndOdds-item {
+  margin-left: 6.5vw;
+  margin-bottom: 6.5vw;
+  width: 9vw;
+  height: 9vw;
+}
+.showNumAndOdds-item .bg,
+.showAllNum-item .bg {
+  border-radius: 50%;
+}
+.showAllNumAndNum {
+  line-height: 2;
+}
+.odds-bets {
+  font-size: 14px;
+}
+.odds-num {
+  font-size: 3.74vw;
+}
+/* 有头部的1-9 */
+.num-postionAny {
+  margin: 0 2vw 3vw;
+  background: #f6f9fc;
+  border: 1px solid #dadee4;
+  padding: 2vw 0;
+  padding-left: 3vw;
+}
+.num-postionAny .checkbox-item {
+  margin-right: 2.5vw;
+}
+.odds-num {
+  position: relative;
+  margin: 0 2.133vw 6.4vw 6.4vw;
+}
+.odds-nwh-header {
+  padding: 0 2.133vw;
+  background: #f6f9fc;
+  border: 1px solid #dadee4;
+  font-size: 12px;
+  line-height: 20px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.odds-nwh-header span {
+  flex: 1;
+}
+.odds-nwh-header span:first-child {
+  position: relative;
+  margin-left: -8%;
+}
+.odds-nwh-header span:last-child {
+  position: relative;
+  margin-right: -8%;
+}
+.pk-nwh-wrap {
+  flex-wrap: wrap;
+}
+.nwh-item {
+  margin-top: 3.2vw;
+  margin-left: 9.067vw;
+}
+.nwh-no-tips .nwh-item {
+  margin-left: 10.08vw;
+}
+.nwh-item:nth-child(6n + 1) {
+  margin-left: 0;
+}
+.nwh-no-tips {
+  margin: 0 2.133vw 6.4vw;
+}
+.nwh-tips {
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #9aa4bc;
+  writing-mode: vertical-rl;
+  transform: translate(-1.8em, -5%);
+}
+.nwh-no-tips .nwh-tips {
+  display: none;
+}
+.odds-item-title {
+  margin-left: 1.5em;
+  writing-mode: vertical-rl;
+}
+/* 位置任选 */
+.checkbox-item {
+  margin-right: 2vw;
+}
+.dent-checkbox {
+  margin: 0 1vw;
+  appearance: none;
+  outline: none;
+}
+.dent-checkbox::after {
+  content: "";
+  display: block;
+  width: 4vw;
+  height: 4vw;
+  background-color: #fff;
+  border: 1px solid #000;
+  transition: background-color 0.2s;
+}
+.dent-checkbox:checked::after {
+  background: url(data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj4NCjxwYXRoIGZpbGw9IiNGRkZGRkYiIGQ9Ik0xNDcuNTY3LDY3LjU3NWMtMy45NzgtMy4yNDEtNC4zNTYtMy4zMzctOC45LTUuNjM5Yy0yLjA0NC0xLjA0NC01LjA1NywxLjY0NS02LjUzLDMuNjM1TDkyLDExNy43MjgNCglMNjUuODUxLDgzLjk3M2MtMS40NzktMS45ODgtNC4yMDYtMi43Mi02LjI1MS0xLjc4MmMtNC42NTgsMi40MDctNC4xODksMi4zMjYtOC4xNjgsNS40NjZjLTEuODE3LDEuNDY2LTEuOTMyLDQuMDgyLTAuNDU2LDYuMDY1DQoJYzAsMCwyOC4xODMsMzYuNDk5LDMxLjU5Miw0MC44OTZjNC45OTksNi4yNzUsMTQuMDksNS45NjUsMTguODY0LDBjMy41Mi00LjQ5OCw0Ni41OS02MS4wNzgsNDYuNTktNjEuMDc4DQoJQzE0OS40OTksNzEuNTQ5LDE0OS4zODUsNjguOTM3LDE0Ny41NjcsNjcuNTc1eiIvPg0KPC9zdmc+DQo=)
+    no-repeat;
+  background-size: 6vw 6vw;
+  background-position: 50% 45%;
+  background-color: #e62b00;
+  border-color: #e62b00;
+}
+/* 背景色 */
+.bg {
+  width: 100%;
+  height: 100%;
+  border: 1px solid #c9c9c9;
+  border-radius: 4px;
+  transition: 0.5s;
+}
+.bg span {
+  transition: 0.5s;
+}
+.dent-bg-input:checked + .bg {
+  background: #e64600;
+  border-color: #e64600;
+  color: #fff;
+}
+.dent-bg-input:checked + .bg span {
+  color: #fff;
+}
+</style>

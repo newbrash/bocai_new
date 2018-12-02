@@ -1,0 +1,114 @@
+{include file="public/header" /}
+<section class="system-news-middle">
+	<ul>
+		<form id="system-news-middle-form" method="post">
+			<li>
+				<div class="title">系统消息</div>
+				<div class="systemNewsList">
+					{foreach $news as $key => $vo}
+					<dl id="{$key}">
+						<input class="fuxuankuan" type="checkbox" name="status[]" {if $vo.status==1}checked=checked{/if} value="{$vo.id}"> <input type="text" name="news{$key}" value="{$vo.content}">
+						<img src="__PUBLIC__/Index/images/delete.png" onclick="del({$key},{$vo.id})">
+						<input type="checkbox" checked="checked" name="id[]" value="{$vo.id}" style="display: none;">
+					</dl>
+					<div class="clear" id="clear{$key}"></div>
+					{/foreach}
+				</div>
+				<div style="text-align: center;">
+					<button type="button" onclick="addSystemNews()">添加内容</button>
+				</div>
+			</li>
+			<li>
+				<div class="title">用户广播设置</div>
+				<div class="lababox">
+					<span>广播最长时间：</span>
+					<input type="text" style="text-align: center;" name="laba_time" value="{$laba.laba_time}"><span>秒</span>
+					<input type="hidden" name="laba_id" value="{$laba.id}">
+				</div>
+			</li>
+		</form>
+		<li style="text-align: center;">
+			<button type="button" class="submitBtn" onclick="submitform()">确定</button>
+		</li>
+	</ul>
+	<script type="text/javascript">
+		var nid = '';
+		var nk = '';
+		function del(k,id=''){
+			console.log('id：'+id)
+			nid = id;
+			nk = k;
+			console.log('nid：'+nid)
+			show_tips_box('您确定删除该信息吗？','提示',1,500,1000,3,true,true,function(){
+				if(nid){
+					$.ajax({
+						url: '{:url("Admin/System/delNews")}',
+						type: 'POST',
+						dataType: 'json',
+						data: {
+							id: nid
+						},
+						success: function(res){
+							console.log(res);
+							if(!res['code']){
+								removeDL(nk);
+							}else{
+								show_tips_box(res['msg']);
+							}
+						},
+						fail: function(res){
+							console.log(res);
+							show_tips_box('请检查网络是否正常！');
+						}
+					});
+				}else{
+					removeDL(k);
+				}
+			});
+		}
+		function removeDL(index){
+			$("#"+index).remove();
+			$("#clear"+index).remove();
+			$(".systemNewsList dl").each(function(i,y){
+				var id = $(y).attr('id');
+				$("#clear"+id).attr('id','clear'+i);
+				$(y).attr('id',i);
+				var v = $(y).find('input').eq(0).val();
+				if(v.indexOf('on_')>=0){
+					$(y).find('input').eq(0).val('on_'+i);
+					$(y).find('img').attr('onclick','del('+i+')');
+				}else if(v){
+					$(y).find('img').attr('onclick','del('+i+','+v+')');
+				}else{
+					$(y).find('img').attr('onclick','del('+i+')');
+				}
+				$(y).find('input').eq(1).attr('name','news'+i);
+			});
+		}
+		function submitform(){
+			submitForm('system-news-middle-form','{:url("Admin/System/dealNews")}',function(res){
+				console.log(res);
+				if(res['code']){
+					show_tips_box(res['msg']);
+				}else{
+					show_tips_box('保存成功');
+				}
+			});
+		}
+
+		function addSystemNews(){
+			var index = $(".systemNewsList dl").last().index()/2+1;
+			console.log(index);
+			// alert(index);
+			var str = '<dl id="'+index+'">';
+			str += '<input class="fuxuankuan" type="checkbox" name="status[]" value="on_'+index+'">';
+			str += ' <input type="text" name="news'+index+'" value="">';
+			str += '<img src="__PUBLIC__/Index/images/delete.png" onclick="del('+index+')">';
+			str += '<input type="checkbox" checked="checked" name="id[]" value="" style="display: none;">';
+			str += '</dl>';
+			str += '<div class="clear" id="clear'+index+'"></div>';
+			$(".systemNewsList").append(str);
+		}
+	</script>
+</section>
+{include file="public/footer" /}

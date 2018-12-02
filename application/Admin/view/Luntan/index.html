@@ -1,0 +1,29 @@
+{include file='public/header' /}
+<section class="admin-luntan-middle">
+	<ul>
+		<a href="{:url('Admin/Luntan/fatie')}">
+			<li style="background: #ccf;">发帖设置</li>
+		</a>
+		<a href="{:url('Admin/Luntan/huitie')}">
+			<li style="background: #ccf;">回帖设置</li>
+		</a>
+		{foreach $lists as $list}
+		<a href="{:url('Admin/Luntan/addFenQu')}?id={$list.id}">
+			<li>
+				<img style="max-width:7vw;max-height:7vw;" src="{$list.img}" alt="">
+				<div>{$list.title}</div>
+				<div style="font-size: 1vw;color: rgb(219,112,147);">({$list.name})</div>
+				<!-- <span style="position: absolute;top: 0px;left: 88%;display: inline-block;width: 5vw;height: 5vw;text-align: center;line-height: 4.5vw;border-radius: 5vw;border: 1px solid pink;color: red;background: pink;">x</span> -->
+			</li>
+		</a>
+		{/foreach}
+		<a href="{:url('Admin/Luntan/addFenQu')}" style="text-decoration: none;">
+			<li> 
+				<img style="max-width:7vw;max-height:7vw;" src="__PUBLIC__/luntan/img/add.png" alt="addLogo">
+				<div style="color: #333;">添加分区</div>
+				<div style="font-size: 1vw;color: #999;">(待分区)</div>
+			</li>
+		</a>
+	</ul>
+</section>
+{include file='public/footer' /}

@@ -1,0 +1,83 @@
+const odds = {
+  sum: {
+    sum: {
+      sum3: 190,
+      sum4: 60,
+      sum5: 31,
+      sum6: 18,
+      sum7: 12,
+      sum8: 9,
+      sum9: 8,
+      sum10: 7,
+      sum11: 7,
+      sum12: 8,
+      sum13: 9,
+      sum14: 12,
+      sum15: 19,
+      sum16: 31,
+      sum17: 63,
+      sum18: 190
+    },
+    size: {
+      big: 2,
+      small: 2,
+      bigSingle: 3,
+      bigDouble: 3,
+      smallSingle: 3,
+      smallDouble: 3,
+      single: 2,
+      double: 2
+    }
+  },
+  threeSame: { threeSameDb: 32, threeSameSg: 190 },
+  threeConAll: 8,
+  threeDiffrent: 32,
+  twoSame: { twoSameDb: 12, twoSameSg: 63 },
+  twoDiffrent: 6
+};
+
+const jsksobj = {
+  twoDiffrent: {
+    twoDiffrent: {
+      commom: "",
+      handy: "",
+      dantuo: ""
+    }
+  },
+  twoSame: {
+    twoSameSg: {
+      commom: "",
+      handy: ""
+    },
+    twoSameDb: {
+      twoSameDb: ""
+    }
+  },
+  threeDiffrent: {
+    threeDiffrent: {
+      commom: "",
+      handy: ""
+    }
+  },
+  threeSame: {
+    threeSameSg: {
+      threeSameSg: ""
+    },
+    threeSameDb: {
+      threeSameDb: ""
+    }
+  },
+  threeConAll: {
+    threeConAllCommom: {
+      threeConAllCommom: ""
+    }
+  },
+  sum: {
+    sum: {
+      size: "",
+      sum: ""
+    }
+  }
+};
+
+export { jsksobj };

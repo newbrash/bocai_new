@@ -1,0 +1,126 @@
+{include file="public/header"}
+<section class="admin-addfenqu-middle">
+	<form id="admin-addfenqu-middle-form">
+		<input type="hidden" name="id" value="{$info.id}">
+		<ul>
+			<li>
+				<span class="titlebox">分区主题：</span>
+				<input type="text" name="title" placeholder="请输入分区的主题" value="{$info.title}" style="padding: 2px;box-sizing: border-box;text-align: left;">
+			</li>
+			<li>
+				<span class="titlebox">分区类型：</span>
+				<input type="text" name="name" placeholder="请输入分区名称" value="{$info.name}" style="padding: 2px;box-sizing: border-box;text-align: left;">
+			</li>
+			<li>
+				<span class="titlebox">进入设置：</span>
+				<input class="inputRadio" type="radio" name="door" value="0" {if $info.door==0}checked="checked" {/if}> <span>不限制</span>
+				<input class="inputRadio" type="radio" name="door" value="1" {if $info.door==1}checked="checked" {/if}> <span>仅会员</span>
+			</li>
+			<li>
+				<span class="titlebox">看帖所需金币：</span>
+				<input type="text" name="gold" placeholder="请输入金币数量" value="{$info.gold}" style="padding: 2px;box-sizing: border-box;">
+				<span>金币</span>
+			</li>
+			<li>
+				<span class="titlebox">高手发帖奖励：</span>
+				<input type="text" name="pride_percent" placeholder="请输入奖励百分比" value="{$info.pride_percent}" {if
+				 !$info.gold}disabled="disabled" {/if} style="padding: 2px;box-sizing: border-box;">
+				<span>%</span>
+			</li>
+			<li>
+				<span class="titlebox">限制发帖：</span>
+				<input class="inputRadio" type="radio" name="limit_tie" value="0" {if $info.limit_tie==0}checked="checked" {/if}>
+				 <span>不限制</span>
+				<input class="inputRadio" type="radio" name="limit_tie" value="1" {if $info.limit_tie==1}checked="checked" {/if}>
+				 <span>限制</span>
+			</li>
+			<li>
+				<span class="titlebox">分区logo：</span>
+				<span style="padding: 2px;box-sizing: border-box;display: inline-block;position:relative;">
+					<input type="file" name="img" id="zone_logo" onchange="showLogo()" placeholder="LOGO" style="position:absolute;z-index: 3; top:-4vw;left:0px; width:25vw;height:8vw;opacity:0;">
+					<button type="button" style="position:absolute;z-index: 2; top:-4vw;left:0px; width:25vw;height:8vw;">上传LOGO</button>
+				</span>
+				<div style="display: flex;justify-content: center;align-items: center;box-sizing: border-box;padding: 7vw;position:relative;">
+					<span style="position:absolute;top:5vw;left:0px;">预览：</span>
+					<img id="prevLogo" src="{$info.img}" alt="LOGO" style="max-height:30vw;max-width:30vw;">
+				</div>
+			</li>
+			<li style="padding: 0px;text-align: center;">
+				<button type="button" onclick="save()">保存</button>
+				{if $info.id}
+				<button type="button" onclick="deleteForm()">删除</button>
+				{/if}
+			</li>
+		</ul>
+	</form>
+	<form id="deleteForm" method="post" style="display: none;">
+		<input type="hidden" name="id" value="{$info.id}">
+	</form>
+	<script type="text/javascript">
+		function save() {
+			submitForm('admin-addfenqu-middle-form', '{:url("Admin/Luntan/addFenQu")}', function (res) {
+				show_tips_box(res['msg']);
+				if (!res['code']) {
+					window.location.href = "{:url('Admin/Luntan/index')}";
+				}
+			})
+		}
+		
+		function showLogo(){
+			console.log("change");
+			var f = document.querySelector("#zone_logo").files[0];
+			var r = new FileReader();
+			var prev = document.querySelector("#prevLogo");
+			r.readAsDataURL(f);
+			r.onload = function(e){
+				prev.src = r.result;
+			}
+		}
+
+		function deleteForm() {
+			show_tips_box('您确定删除该分区吗？', '提示', 1, 500, 1000, 3, true, true, function (res) {
+				submitForm('deleteForm', '{:url("Admin/Luntan/deleteFenQu")}', function (res) {
+					console.log(res);
+					show_tips_box(res['msg']);
+					if (!res['code']) {
+						window.location.href = "{:url('Admin/Luntan/index')}";
+					}
+				})
+			});
+		}
+		$("input[name='gold']").on('input propertychange', function (e) {
+			$(this).val($(this).val().match(/[0-9]*/));
+			if (Number($(this).val())) {
+				$("input[name='pride_percent']").removeAttr('disabled');
+			} else {
+				$("input[name='pride_percent']").val(0);
+				$("input[name='pride_percent']").attr('disabled', 'disabled');
+			}
+		});
+
+
+		$("input[name='pride_percent']").on('input propertychange', function (e) {
+
+			var val = $(this).val();
+			// console.log(val);
+			if (val.indexOf('.') >= 0) {
+				var stmp = val.split('.');
+				stmp[0] = stmp[0].match(/[0-9]*/);
+				stmp[1] = stmp[1].match(/[0-9]*/);
+				// console.log(stmp);
+				val = stmp[0] + '.' + stmp[1];
+				if (stmp[1][0]) {
+					val = Number(val);
+					// console.log('number:'+val);
+					val = Math.round(val * 100) / 100;
+					// console.log('round:'+val);
+				}
+			} else {
+				val = val.match(/[0-9]*/);
+			}
+			// console.log(Number(val));
+			$(this).val(val);
+		});
+	</script>
+</section>
+{include file="public/footer"}

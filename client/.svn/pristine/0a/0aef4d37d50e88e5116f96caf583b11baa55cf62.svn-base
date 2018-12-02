@@ -1,0 +1,542 @@
+<template>
+  <div>
+    <mt-header title="发布帖子" style="background:#57D6DD;">
+      <router-link :to="{path:'/theme', query:{zone_id: this.$route.query.zone_id}}" slot="left">
+        <mt-button icon="back">返回</mt-button>
+      </router-link>
+      <mt-button slot="right" @click="postTheme">发布</mt-button>
+    </mt-header>
+    <div class="pageContent">
+      <div class="post">
+        <div class="title">
+          <mt-field placeholder="请输入主题..." v-model="title"></mt-field>
+        </div>
+        <div class="postContent">
+          <div class="extend">
+            <img @click="isFace = !isFace" src="./../../assets/表情@2x.png">
+            <img src="static/截图.png">
+            <input id="insert-img-input-box" ref="pathClear1" type="file" style="height:7vw;width:7vw;overflow:hidden;margin-left:-12vw;opacity:0;" @change="insertImg(false)">
+          </div>
+          <div v-if="isFace" class="faces">
+            <img v-for="(img, index) in faceList" :key="index" :src="img" alt="" @click="addFace(img)">
+          </div>
+          <div class="text">
+            <!-- <textarea id="postText" placeholder="请输入内容" rows="10" v-model="postText"></textarea> -->
+            <div @input="afterContent=$event.target.innerHTML" contenteditable="true" id="postText" placeholder="请输入内容" rows="10" @keydown="beforeDel" @keyup="getContent"></div>
+          </div>
+          <div class="image">
+            <div class="oneImgs" style="" v-for="(img, index) in imgs" :key="index">
+              <img :src="srchost+img" alt="">
+              <span @click="delImg(srchost+img, index)">x</span>
+            </div>
+            <div class="preview" style="position:relative;">
+              <img src="./../../assets/添加相册@2x.png">
+              <input type="file" id="add-img-input-box" ref="pathClear2" @change="insertImg(true)" style="position:absolute;top:0px;left:0px;width:28vw;height:28vw;border:0px solid red;opacity:0;">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+// console.log("FORUM_POST_VUE");
+export default {
+  data() {
+    return {
+      title: "", //标题
+      srchost: this.GLOBAL.logoHost + "themeImgs/", //主题图片的保存目录
+      imgs: [], //主题附属图片列表
+      isFace: false, //是否插入表情
+      // 表情列表
+      faceList: [
+        "static/faces/分类.svg",
+        "static/faces/发呆.svg",
+        "static/faces/可爱.svg",
+        "static/faces/大笑.svg",
+        "static/faces/失败.svg",
+        "static/faces/板脸.svg",
+        "static/faces/白眼.svg",
+        "static/faces/笑口常开.svg",
+        "static/faces/等待.svg",
+        "static/faces/衰.svg",
+        "static/faces/调皮.svg",
+        "static/faces/难过.svg",
+        "static/faces/面无表情.svg",
+        "static/faces/鬼脸.svg"
+      ],
+      // 接受的图片格式
+      imgType: "image/jpg, image/jpeg, image/png, image/gif",
+      // 删除前的内容长度
+      beforeLenght: 0,
+      // 删除后的内容长度
+      afterLength: 0,
+      //保存删除前的内容字符串
+      beforeContent: "",
+      //保存删除后的内容字符串
+      afterContent: "",
+      // 保存删除后的所有剩余图片
+      afterImgs: []
+    };
+  },
+  mounted: function() {
+    this.$parent.tabbarShow = false;
+    // this.$parent.radioText = this.GLOBAL.radioTextList;
+    
+    // 检测链接是否存在
+    // if (!this.GLOBAL.socketHand || this.GLOBAL.socketHand.readyState == 3) {
+    //   let that = this;
+    //   this.createSocket();
+    // }
+    this.checkSocket();
+    this.onmessage();
+  },
+  watch: {
+    /**
+     * 监测内容的变化
+     */
+    afterContent: function() {
+      this.afterDel();
+    }
+  },
+  methods: {
+    beforeDel() {
+      var e = event || window.event;
+      var k = e.keyCode || e.which;
+      // 获取删除前的内容
+      this.beforeContent = document.getElementById("postText").innerHTML;
+      this.beforeLenght = this.beforeContent.length;
+      this.afterContent = this.beforeContent;
+    },
+    getContent() {
+      /**
+       * 获取删除后的内容字符串
+       */
+      this.afterContent = document.getElementById("postText").innerHTML;
+    },
+    /**
+     * 检测是否删除插入的图片
+     */
+    afterDel() {
+      this.afterLength = this.afterContent.length;
+      /**
+       * 判断删除的是否为图片，相差大于3的话一定为图片
+       */
+      if (this.beforeLenght - this.afterLength >= 3) {
+        let rege = /<img.*?src="(.*?)".*?>/gm;
+        // 匹配删除前的内容的所有图片路径
+        let beforeImgs = this.beforeContent.match(rege);
+        // 匹配删除后的内容的所有图片路径
+        this.afterImgs = this.afterContent.match(rege);
+        if (beforeImgs) {
+          // 匹配src路径
+          let reg = new RegExp(/src="(.*?)"/);
+          // 匹配表情
+          let regEx = new RegExp(/src="static\/faces\/.*?"/);
+          for (let i = 0; i < beforeImgs.length; i++) {
+            // console.log(beforeImgs[i]);
+            // 判断是否为表情包
+            if (!regEx.test(beforeImgs[i])) {
+              // 判断该图片是否被删除
+              if (this.inArray(beforeImgs[i]) == -1) {
+                let result = reg.exec(beforeImgs[i]);
+                // console.log(result[1]);
+                this.delImg(result[1]);
+              }
+            } else {
+              // console.log("表情包");
+            }
+          }
+        } else {
+          // console.log("没有图片");
+        }
+      }
+    },
+    inArray(str) {
+      if (this.afterImgs && this.afterImgs.length) {
+        for (let i = 0; i < this.afterImgs.length; i++) {
+          if (this.afterImgs[i] == str) {
+            return i;
+          }
+        }
+      }
+      return -1;
+    },
+    /**
+     * 删除图片
+     */
+    delImg(src, index) {
+      src = src.replace(this.GLOBAL.Host, "");
+      if (index >= 0) {
+        this.imgs.splice(index, 1);
+      }
+      // 发送删除图片文件的请求
+      let url = this.GLOBAL.Host + "/bcweb/index.php/Home/Uploads/unlinkFile";
+      this.$axios
+        .get(url, {
+          params: {
+            path: src
+          }
+        })
+        .then(response => {
+          // console.log(response.data);
+        });
+    },
+    /**
+     * 插入图片
+     */
+    insertImg(imgs = false) {
+      // console.log("imgs" + imgs);
+      // 获取文件对象
+      let file = event.target.files[0];
+      // 获取对象的格式
+      let type = file.type;
+      // 获取对象的大小
+      let size = file.size;
+      // 检测对象的格式是否正确
+      if (this.imgType.indexOf(type) == -1) {
+        this.$messagebox.alert("请选择格式为：jpg|jpeg|png|gif的图片");
+        return false;
+      }
+      // 检测对象的大小是否满足条件
+      if (size > 3145728) {
+        this.$messagebox.alert("照片不可以超过3M");
+        return false;
+      }
+      let url =
+        this.GLOBAL.Host + "/bcweb/index.php/Home/Uploads/uploadThemeImg";
+      // 创建form表单对象
+      let form = new FormData();
+      // 向form表单对象添加文件对象
+      form.append("file", file, file.name);
+      let that = this;
+      // 上传图片
+      this.$axios
+        .post(url, form, {
+          // 设置上传文件所需的头信息
+          headers: { "Content-Type": "multipart/form-data" }
+        })
+        .then(response => {
+          // 判断是否为附属图片
+          if (imgs) {
+            // 附属图片
+            // 判断是否上传成功
+            if (response.status) {
+              // 压入附属图片列表
+              this.imgs.push(response.data.saveName);
+              // document.getElementById("add-img-input-box").value = "";
+            } else {
+              that.$messagebox.alert("上传失败！");
+            }
+          } else {
+            // 插入图片
+            // 判断是否上传成功
+            if (response.status) {
+              // 向内容插入图片
+              that.insertContent(
+                '<img style="max-width:100%;display:inline-block;" src="' +
+                  that.GLOBAL.Host +
+                  response.data.src +
+                  '" />'
+              );
+              // document.getElementById("add-img-input-box").value = "";
+            } else {
+              that.$messagebox.alert("上传失败！");
+            }
+          }
+          this.$refs.pathClear1.value ='';
+          this.$refs.pathClear2.value ='';
+          // document.getElementById("add-img-input-box").val("");
+        });
+    },
+    /**
+     * 插入表情
+     */
+    addFace(img) {
+      this.insertContent(
+        '<img style="display:inline;width:6vw;height:6vw;margin:0px .5vw;" src="' +
+          img +
+          '" />'
+      );
+      this.isFace = !this.isFace;
+    },
+    // focusAgin(obj) {
+    //   if (window.getSelection) {
+    //     obj.focus(); //解决ff不获取焦点无法定位问题
+    //     let range = window.getSelection(); //创建range
+    //     range.selectAllChildren(obj); //range 选择obj下所有子内容
+    //     range.collapseToEnd(); //光标移至最后
+    //   } else if (document.selection) {
+    //     let range = document.selection.createRange(); //创建选择对象
+    //     range.moveToElementText(obj); //range定位到obj
+    //     range.collapse(false); //光标移至最后
+    //     range.select();
+    //   } else {
+    //     this.$messagebox.alert("当前设备不支持光标重定位，请手动点击");
+    //   }
+    // },
+    //获取光标（插入）位置
+    saveRange() {
+      var selection = window.getSelection
+        ? window.getSelection()
+        : document.selection;
+      // console.log(selection);
+      // 判断插入位置是否为编辑区
+      if (
+        !selection.rangeCount ||
+        (selection.focusNode.id != "postText" &&
+          selection.focusNode.parentNode.id != "postText" &&
+          selection.focusNode.parentNode.parentNode.id != "postText")
+      ) {
+        this.$messagebox.alert("插入位置不在编辑区中！");
+        return false;
+      }
+      var range = selection.createRange
+        ? selection.createRange()
+        : selection.getRangeAt(0);
+      return range;
+    },
+    //向光标位置插入内容
+    insertContent(str) {
+      var selection,
+        range = this.saveRange();
+      if (!range) {
+        return false;
+      }
+      if (!window.getSelection) {
+        range.pasteHTML(str);
+        range.collapse(false);
+        range.select();
+      } else {
+        selection = window.getSelection
+          ? window.getSelection()
+          : document.selection;
+        range.collapse(false);
+        var hasR = range.createContextualFragment(str);
+        var hasR_lastChild = hasR.lastChild;
+        while (
+          hasR_lastChild &&
+          hasR_lastChild.nodeName.toLowerCase() == "br" &&
+          hasR_lastChild.previousSibling &&
+          hasR_lastChild.previousSibling.nodeName.toLowerCase() == "br"
+        ) {
+          var e = hasR_lastChild;
+          hasR_lastChild = hasR_lastChild.previousSibling;
+          hasR.removeChild(e);
+        }
+        range.insertNode(hasR);
+        if (hasR_lastChild) {
+          range.setEndAfter(hasR_lastChild);
+          range.setStartAfter(hasR_lastChild);
+        }
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      this.afterContent = document.getElementById('postText').innerHTML;
+    },
+    /**
+     * 获取光标位置
+     */
+    // getCursor(element) {
+    //   // element.focus();
+    //   //获取当前光标位置
+    //   var caretOffset = 0;
+    //   var doc = element.ownerDocument || element.document;
+    //   var win = doc.defaultView || doc.parentWindow;
+    //   var sel;
+    //   if (typeof win.getSelection != "undefined") {
+    //     //谷歌、火狐
+    //     sel = win.getSelection();
+    //     if (sel.rangeCount > 0) {
+    //       //选中的区域
+    //       var range = win.getSelection().getRangeAt(0);
+    //       var preCaretRange = range.cloneRange(); //克隆一个选中区域
+    //       preCaretRange.selectNodeContents(element); //设置选中区域的节点内容为当前节点
+    //       preCaretRange.setEnd(range.endContainer, range.endOffset); //重置选中区域的结束位置
+    //       caretOffset = preCaretRange.toString().length;
+    //     }
+    //   } else if ((sel = doc.selection) && sel.type != "Control") {
+    //     //IE
+    //     var textRange = sel.createRange();
+    //     var preCaretTextRange = doc.body.createTextRange();
+    //     preCaretTextRange.moveToElementText(element);
+    //     preCaretTextRange.setEndPoint("EndToEnd", textRange);
+    //     caretOffset = preCaretTextRange.text.length;
+    //   }
+    //   return caretOffset;
+    // },
+
+    /**
+     * 发帖子
+     */
+    postTheme: function() {
+      /**
+       * 判断标题是否为空
+       */
+      if (!this.title) {
+        this.$messagebox.alert("请输入标题！");
+        return false;
+      }
+      /**
+       * 判断内容是否为空
+       */
+      if (!document.getElementById("postText").innerHTML) {
+        this.$messagebox.alert("请输入帖子内容！");
+        return false;
+      }
+      /**
+       * 判断是否存在主题区id
+       */
+      if (!this.$route.query.zone_id) {
+        this.$messagebox.alert("数据丢失，请重新进入发帖页面！");
+        return false;
+      }
+
+      let data = {
+        type: "postTheme",
+        zone_id: this.$route.query.zone_id, //分区id
+        title: this.title, //标题
+        content: document
+          .getElementById("postText")
+          .innerHTML.replace(/"/g, ""), //内容
+        imgs: this.imgs, //附属图片列表
+        user_id: this.GLOBAL.userInfo.id, //用户id
+        user_name: this.GLOBAL.userInfo.nickname, // 用户昵称
+        con_id: this.GLOBAL.connectionId //链接资源标识符
+      };
+      // console.log(data);
+      let that = this;
+      // 发送请求
+      this.senddata(data, function(response) {
+        // console.log(response);
+        if (response.status) {
+          // 发表成功，跳转到主题列表页
+          that.$router.push({
+            path: "/theme",
+            query: {
+              themeInfo: that.$route.query.themeInfo,
+              zone_id: that.$route.query.zone_id
+            }
+          });
+        } else {
+          that.$messagebox.alert(response.msg);
+        }
+      });
+    }
+  }
+};
+</script>
+
+<style scoped>
+.post {
+  padding: 2vw;
+}
+.title {
+  border: 0.3vw solid #d1d1d1;
+  margin: 2vw 0;
+}
+.extend {
+  padding: 2vw;
+  display: flex;
+  flex-wrap: nowrap;
+  border: 0.3vw solid #d1d1d1;
+}
+.extend img {
+  width: 7vw;
+  height: 7vw;
+  margin-right: 5vw;
+}
+
+.image {
+  display: flex;
+  /* flex-grow: 1; */
+  /* flex-shrink: 1; */
+  /* flex-basis: auto; */
+  flex-wrap: wrap;
+  margin-left: -0.5vw;
+  margin-bottom: 15vw;
+}
+.image .oneImgs {
+  /* border: 1px solid red; */
+  border: 0.3vw dashed #ccc;
+  position: relative;
+}
+.image .preview,
+.image .oneImgs {
+  width: 27.7333vw;
+  height: 27.7333vw;
+  display: flex;
+  justify-content: center;
+  justify-items: center;
+  align-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 1vw;
+  margin-top: 1vw;
+}
+.image .preview img {
+  width: 100%;
+  height: 100%;
+}
+.image .oneImgs img {
+  max-width: 100%;
+  max-height: 100%;
+}
+.image .oneImgs span {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 5vw;
+  height: 5vw;
+  border-radius: 5vw;
+  background: red;
+  box-shadow: 0vw 0vw 0.4vw 0.4vw yellow;
+  color: #fff;
+  font-size: 4vw;
+  line-height: 5vw;
+  text-align: center;
+}
+.faces {
+  display: flex;
+  flex-wrap: wrap;
+  border: 0.3vw solid #d1d1d1;
+  border-top: none;
+  padding-bottom: 2vw;
+}
+.faces img {
+  width: 6vw;
+  height: 6vw;
+  margin-left: 1vw;
+  margin-top: 2vw;
+}
+.text {
+  padding: 2vw;
+  height: 35vh;
+  border: 0.3vw solid #d1d1d1;
+  border-top: none;
+}
+#postText:empty::before {
+  content: attr(placeholder);
+  color: #ccc;
+  font-size: 4vw;
+  /* line-height: 35vh; */
+}
+#postText {
+  width: 100%;
+  height: 100%;
+  border: none;
+  text-align: left;
+  overflow: auto;
+}
+#postText:focus {
+  border: none;
+  outline: none;
+}
+#postText:-moz-placeholder {
+  text-align: center;
+}
+#postText::-webkit-input-placeholder {
+  text-align: center;
+}
+</style>

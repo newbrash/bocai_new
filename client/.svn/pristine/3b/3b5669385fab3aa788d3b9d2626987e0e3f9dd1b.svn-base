@@ -1,0 +1,182 @@
+//请求和处理数据
+const getDataFunc = {
+  data() {
+    return {
+      gameName: "", //游戏的名字
+      nextIssue: 0, //下期开奖期号
+      recentInfo: [] //近期开奖信息
+    };
+  },
+  methods: {
+    /**
+     *getOddsData 请求赔率数据
+     * @param {*} gameName 游戏的名字 例如 江苏快三 jsks
+     * @param {*} socket 游戏的socket 没有传入时
+     */
+    getOddsData({ gameName, socket, 断网了 }) {
+      if (断网了) {
+        ["odds", "haoma", "shengxiao", "version"].forEach(key => {
+          if (this[key] !== undefined) {
+            let haveCache = this.$getLocalCache(gameName + "-" + key);
+            if (haveCache !== undefined && haveCache !== false) {
+              this[key] = haveCache;
+            }
+          }
+        });
+        return;
+      }
+      this.gameName = gameName;
+      let version = this.$getLocalCache(gameName + "-version");
+      version = version === false ? -1 : version;
+      const sendDataToServer = () => {
+        this.senddata({ data: { type: "deskInfo", game: gameName, version } });
+      };
+
+      //应该创建的socket地址
+      let gameGongHost = this.GLOBAL.gameGongHost;
+      let shouldSendSocket = socket || gameGongHost;
+
+      //发起请求
+      if (!this.GLOBAL.gameSocketHand) {
+        this.createSocket(shouldSendSocket, () => {
+          this.dealOnMessage();
+          sendDataToServer();
+        });
+      } else {
+        this.dealOnMessage();
+        sendDataToServer();
+      }
+    },
+    //处理返回的数据
+    dealOnMessage() {
+      let gameName = this.gameName;
+      this.onmessage(res => {
+        res = JSON.parse(res);
+        //最新期号
+        if (res.issue) {
+          this.nextIssue = res.issue;
+          this.GLOBAL[gameName].nextIssue = res.issue;
+        }
+        //保持心跳
+        if (res.code === "pong") {
+          this.senddata({ data: { type: "ping" } });
+          return;
+        }
+        //处理赔率信息
+        if (res.deskInfo) deskInfoFunc.call(this);
+        //处理 近期开奖信息
+        if (res.recentInfo) recentInfoFunc.call(this);
+
+        //countdown 启动倒计时
+        if (res.countdown && res.interval) {
+          this.GLOBAL[gameName].countdown = res.countdown * 1000;
+          this.GLOBAL[gameName].interval = res.interval;
+          this.countTime(res.countdown * 1000, res.interval, "timeToOpen");
+        }
+
+        function deskInfoFunc() {
+          //对比 version 版本号
+          let serverVersion = res.deskInfo.version;
+          let localVersion = this.$getLocalCache(gameName + "-version");
+          localVersion = localVersion === false ? -1 : localVersion;
+
+          if (serverVersion > localVersion) {
+            ["odds", "haoma", "shengxiao", "version"].forEach(key => {
+              if (this[key] !== undefined && res.deskInfo[key] !== undefined) {
+                this[key] = res.deskInfo[key];
+                this.$setLocalCache(gameName + "-" + key, res.deskInfo[key]);
+              }
+            });
+            this.$setLocalCache(gameName + "-rules", res.deskInfo["rules"]);
+          } else if (serverVersion == localVersion) {
+            ["odds", "haoma", "shengxiao", "version"].forEach(key => {
+              if (this[key] !== undefined) {
+                let haveCache = this.$getLocalCache(gameName + "-" + key);
+                if (haveCache !== undefined && haveCache !== false) {
+                  this[key] = haveCache;
+                }
+              }
+            });
+            console.log(
+              gameName + " %c赔率没有更改，从localStorage读取",
+              "color: red;"
+            );
+          }
+        }
+
+        function recentInfoFunc() {
+          console.log("%c 更新开奖信息", "color: red;");
+          this.recentInfo = res.recentInfo;
+        }
+      });
+    }
+  }
+};
+
+//倒计时
+const countDownFunc = {
+  data() {
+    return {
+      timer: {}
+    };
+  },
+  methods: {
+    // endTimeStamp时间戳 dataStr...
+    countTime(endTimeStamp, interval, dataStr) {
+      let that = this;
+      console.log(
+        "服务器发来时间" + new Date(endTimeStamp).Format("yyyy-MM-dd hh:mm:ss")
+      );
+      console.log("开启倒计时");
+      function setTimer() {
+        let leftTime = endTimeStamp - new Date().getTime(); //时间差
+        // 定义变量 d,h,m,s保存倒计时的时间
+        let d, h, m, s;
+        function toFix(str) {
+          return str < 10 ? "0" + str : str;
+        }
+        if (leftTime >= 0) {
+          // d = Math.floor(leftTime/1000/60/60/24);
+          h = toFix(Math.floor((leftTime / 1000 / 60 / 60) % 24));
+          m = toFix(Math.floor((leftTime / 1000 / 60) % 60));
+          s = toFix(Math.floor((leftTime / 1000) % 60));
+          that.$set(that.timer, dataStr, `${h}:${m}:${s}`);
+        } else {
+          clearInterval(that.timer[dataStr + "Interval"]);
+          //开始下一期的倒计时
+          that.nextIssue += 1;
+          that.countTime(endTimeStamp + interval * 1000, interval, dataStr);
+        }
+      }
+      setTimer();
+      that.timer[dataStr + "Interval"] = setInterval(setTimer, 1000);
+    }
+  }
+};
+
+//缓存 每个游戏主界面
+const toggleShouldKeepAlive = {
+  //离开页面之前
+  beforeRouteLeave(to, from, next) {
+    let temp = this.$parent.shouldKeepAlive;
+    let name = from.name;
+    //离开游戏主界面时，判断是进游戏子界面，还是退出到大厅
+    if (to.meta.index < from.meta.index) {
+      //退出到大厅 ，把组件名字 从缓存数组中 删除，以注销组件
+      temp.splice(temp.indexOf(from.name), 1);
+    } else {
+      //进游戏子界面 ，把组件名字 添加到 缓存数组中，以缓存组件
+      if (temp.indexOf(name) === -1) {
+        this.$parent.shouldKeepAlive.push(name);
+      }
+    }
+
+    next();
+  },
+  //游戏页面即组件注销之后，还原缓存数组的数据。
+  destroyed() {
+    this.$parent.shouldKeepAlive = [...this.GLOBAL.shouldKeepAlive];
+  }
+};
+
+export { getDataFunc, countDownFunc, toggleShouldKeepAlive };

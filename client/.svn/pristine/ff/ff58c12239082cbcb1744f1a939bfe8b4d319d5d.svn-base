@@ -1,0 +1,338 @@
+<template>
+  <div class="odds-main">
+    <!-- 玩法提示 -->
+    <div @click="$emit('oddsTips')"
+         class="odds-right-tips">玩法提示<span class="iconfont icon-htbarrowright02"></span></div>
+
+    <div class="odds-left-tips">赔率: <span class="font-theme">6.300</span></div>
+
+    <!-- 1-6数字展示 -->
+    <div v-if="showNum || showSecondNum"
+         class="odds bgc-fff">
+
+      <div class="odds-item-wrap flex justify-sa justify-se">
+        <span v-if="currentOdds==='twoDiffrent-dantuo'"
+              class="odds-item-title fontc-6 fz-12">拖码</span>
+        <span v-if="currentOdds==='twoSame-commom'"
+              class="odds-item-title fontc-6 fz-12">二同号</span>
+        <span v-if="['twoDiffrent-commom','threeDiffrent-commom'].includes(currentOdds)"
+              class="odds-item-title fontc-6 fz-12">号码</span>
+        <label v-for="n in 6"
+               class="odds-item showAllNum-item">
+          <input type="checkbox"
+                 :value="n"
+                 v-model="value"
+                 class="dent-bg-input hidden">
+          <div class="bg flex flow-col justify-ct">
+            <span class="odds-bets">{{n}}</span>
+          </div>
+        </label>
+      </div>
+
+      <div v-if="showSecondNum"
+           class="odds-item-wrap flex justify-sa justify-se">
+        <span v-if="currentOdds==='twoSame-commom'"
+              class="odds-item-title fontc-6 fz-12">二同号</span>
+        <span v-if="currentOdds==='twoDiffrent-dantuo'"
+              class="odds-item-title fontc-6 fz-12">拖码</span>
+        <label v-for="n in 6"
+               class="odds-item showAllNum-item">
+          <input type="checkbox"
+                 :value="n"
+                 v-model="value"
+                 class="dent-bg-input hidden">
+          <div class="bg flex flow-col justify-ct">
+            <span class="odds-bets">{{n}}</span>
+          </div>
+        </label>
+      </div>
+
+    </div>
+
+    <!-- 手动选择 -->
+    <div v-if="handy"
+         class="odds bgc-fff">
+      <textarea class="odds-textarea"
+                placeholder="请手动输入号码">
+      </textarea>
+      <p class="textarea-tips fontc-9">每一注号码之间请用逗号[，]、空格[]、换行键[。]隔开。</p>
+    </div>
+
+    <div v-if="normal"
+         class="odds flex bgc-fff">
+
+      <label v-for="(objValue,objKey) in shouldRender"
+             class="odds-item">
+        <input type="checkbox"
+               :value="objKey"
+               v-model="value"
+               class="dent-bg-input hidden">
+        <div :class="getColor && getColorFunc(objKey)"
+             class="bg flex flow-col justify-ct">
+          <span class="odds-bets">{{objValue}}</span>
+          <span v-if="normalShowOdds"
+                class="odds-num font-theme">赔率:{{objValue}}</span>
+        </div>
+      </label>
+
+    </div>
+
+    <div v-if="showNumAndOdds"
+         class="odds flex bgc-fff">
+
+      <label v-for="(objvalue,objkey,objindex) in betsObj"
+             class="odds-item showAllNum-item">
+        <input type="checkbox"
+               :value="objkey"
+               v-model="value"
+               class="dent-bg-input hidden">
+        <div class="bg flex flow-col justify-ct">
+          <span class="odds-bets">{{(objindex+1).toString().length === 1 ? '0'+ (objindex+1) : (objindex+1)}}</span>
+        </div>
+        <span class="font-theme showAllNumAndNum">{{objvalue.toFixed(2)}}</span>
+      </label>
+
+    </div>
+
+  </div>
+</template>
+
+<script>
+import { keyToCharacter } from '@/js/6hecai-odds';
+
+export default {
+  props: {
+    betsObj: [Array,Object],  //需要渲染的对象或者数组
+    currentOdds: String, //当前的子玩法 用来切换不同的赔率展示方式
+    activeTab: [String,Number], //6合彩页面 激活tab，配合 type 切换不同的赔率展示方式
+    value: Array, //value 用来接受v-model传进来的值
+  },
+  filters: {
+    // 键值转成中文
+    keyToCharacter: function(value,type,currentSubOdds) {
+      let character = '';
+      //正码过关 和 正码1-6 翻译都一样,key不一样，
+      //为了提升性能，和后台商量key改为 key_dan的形式，取dan遍历
+      // let needSplit = ['zhmgg','qsb','ssb'].includes(currentSubOdds) || type === 'zhm1-6';
+      if(value.match(/_/)) value = value.split('_')[1];
+
+      for( let key in keyToCharacter){
+        if( key === value ) {
+          character = keyToCharacter[key]
+          break;
+        }
+      }
+
+      if(!character)character = value;
+      return character;
+    }
+  },
+  data() {
+    return{
+      normal:false,
+      handy:false,  //手动选号
+      showNum:false,  //显示 1-6 号码
+      showSecondNum:false,  //显示二行 1-6 号码
+      showNumAndOdds:false, //显示 3-18 号码和赔率
+    }
+  },
+  computed:{
+    //应该渲染的数组或对象
+    shouldRender (){
+      let shouldRender;
+      let {currentOdds,betsObj} = this;
+      if (currentOdds === 'twoSame-twoSameDb') shouldRender = ['11*','22*','33*','44*','55*','66*'];
+
+      return betsObj|| shouldRender;
+    },
+    normalShowOdds(){
+      return !['twoSame-twoSameDb'].includes(this.currentOdds);
+    }
+  },
+  methods:{
+  },
+  watch: {
+    //value，向外部派发下注的信息
+    value(value) {
+      this.$emit('input',value);
+    },
+    currentOdds:{
+      handler(currentOdds) {
+        //
+        let normal = ["twoSame-twoSameDb","threeSame-threeSameSg","threeSame-threeSameDb","threeConAl1-threeConA1lCommom",
+            "sum-size"];
+        //手动选号
+        let handy =  ["twoDiffrent-handy","twoSame-handy","threeDiffrent-handy"];
+        //显示 1-6号码
+        let showNum = ["twoDiffrent-commom","threeDiffrent-commom"];
+        let showSecondNum = ["twoDiffrent-dantuo","twoSame-commom"];
+        //
+        let showNumAndOdds = ["sum-sum"];
+
+        this.normal = normal.includes(currentOdds);
+        this.handy = handy.includes(currentOdds);
+        this.showNum = showNum.includes(currentOdds);
+        this.showSecondNum = showSecondNum.includes(currentOdds);
+        this.showNumAndOdds = showNumAndOdds.includes(currentOdds);
+
+      },
+      immediate: true
+    }
+  }
+}
+</script>
+
+<style scoped>
+.hidden {
+  display: none;
+}
+.font_red {
+  color: #cc0000;
+}
+.font_blue {
+  color: #0e86e3;
+}
+.font_green {
+  color: #38be4f;
+}
+/* 下注信息展示区 */
+.odds-main {
+  flex: 1;
+  position: relative;
+  padding-top: 12vw;
+  width: 100%;
+}
+.odds-main-ovfa {
+  overflow: auto;
+}
+.odds-right-tips,
+.odds-left-tips {
+  position: absolute;
+  z-index: 1;
+  top: 2vw;
+  padding: 0 2vw;
+  background: #f4f6f9;
+  color: #7f8baa;
+  line-height: 6vw;
+}
+.odds-right-tips {
+  right: 0;
+  border-top-left-radius: 3vw;
+  border-bottom-left-radius: 3vw;
+}
+.odds-right-tips .iconfont {
+  font-size: 3.46vw;
+}
+.odds-zhmgg {
+  position: relative;
+}
+.odds-left-tips {
+  left: 0;
+  border-top-right-radius: 3vw;
+  border-bottom-right-radius: 3vw;
+}
+.odds {
+  flex: 1;
+  flex-wrap: wrap;
+  padding-right: 6vw;
+  line-height: 1.6;
+}
+.odds-item-wrap {
+  margin-bottom: 5vw;
+}
+.odds-item-title {
+  writing-mode: vertical-rl;
+}
+.odds-textarea {
+  position: relative;
+  box-sizing: border-box;
+  margin: 8px;
+  padding: 8px;
+  width: calc(100% - 16px);
+  height: 40vh;
+  background: #fdfdfd;
+  border: 8px solid #f6f9fc;
+  outline: 1px solid #dadee4;
+  outline-offset: -8px;
+  box-shadow: 0 0 0 1px #dadee4;
+  caret-color: #e64600;
+  resize: none;
+}
+.textarea-tips {
+  text-align: left;
+  text-indent: 8px;
+}
+.odds-same {
+  padding-right: 6vw;
+}
+.odds-same > label {
+  margin-bottom: 6vw;
+}
+.odds-item {
+  margin-left: 6vw;
+  margin-bottom: 6vw;
+  width: calc(100% / 3 - 6vw);
+  height: 14vw;
+  box-sizing: border-box;
+}
+.showAllNum-item {
+  margin-left: 0;
+  width: 28px;
+  height: 28px;
+  background: #f7f9fa;
+  border-radius: 50%;
+}
+.showAllNum-item .bg {
+  border-radius: 50%;
+}
+.showAllNumAndNum {
+  line-height: 2;
+}
+.odds-bets {
+  font-size: 4.26vw;
+}
+.odds-num {
+  font-size: 3.74vw;
+}
+.bg {
+  width: 100%;
+  height: 100%;
+  border: 1px solid #c9c9c9;
+  border-radius: 4px;
+  transition: 0.5s;
+}
+.bg span {
+  transition: 0.5s;
+}
+.dent-bg-input:checked + .bg {
+  background: #e64600;
+  border-color: #e64600;
+}
+.dent-bg-input:checked + .bg.font_red {
+  background: #cc0000;
+  border-color: #e64600;
+}
+.dent-bg-input:checked + .bg.font_blue {
+  background: #0e86e3;
+  border-color: #0e86e3;
+}
+.dent-bg-input:checked + .bg.font_green {
+  background: #38be4f;
+  border-color: #38be4f;
+}
+.dent-bg-input:checked + .bg span {
+  color: #fff;
+}
+/* 5行 */
+.wx-odds-item {
+  height: auto;
+}
+.wx-num {
+  flex-wrap: wrap;
+  margin: 0 0 2vw 2vw;
+  font-size: 3.2vw;
+}
+.wx-num span {
+  margin-right: 0.5em;
+}
+</style>

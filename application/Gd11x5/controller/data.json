@@ -1,0 +1,5 @@
+{
+    "game": "Gd11x5",
+    "type": "getInfos|bets",
+    "request_type": "getOdds"
+}

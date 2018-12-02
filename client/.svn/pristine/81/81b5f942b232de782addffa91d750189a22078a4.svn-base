@@ -1,0 +1,146 @@
+<script>
+var intervalHandle = null;
+const initMedia = function(
+  that,
+  elementId,
+  showId,
+  audioFlag = false,
+  videoFlag = false
+) {
+  // alert("初始化Media");
+  // 老的浏览器可能根本没有实现 mediaDevices，所以我们可以先设置一个空的对象
+  if (navigator.mediaDevices === undefined) {
+    navigator.mediaDevices = {};
+  }
+
+  // 一些浏览器部分支持 mediaDevices。我们不能直接给对象设置 getUserMedia
+  // // 因为这样可能会覆盖已有的属性。这里我们只会在没有getUserMedia属性的时候添加它。
+  if (navigator.mediaDevices.getUserMedia === undefined) {
+    navigator.mediaDevices.getUserMedia = function(constraints) {
+      // 首先，如果有getUserMedia的话，就获得它
+      var getUserMedia =
+        navigator.webkitGetUserMedia ||
+        navigator.mozGetUserMedia ||
+        navigator.getUserMedia;
+
+      // 一些浏览器根本没实现它 - 那么就返回一个error到promise的reject来保持一个统一的接口
+      if (!getUserMedia) {
+        return Promise.reject(
+          new Error("getUserMedia is not implemented in this browser")
+        );
+      }
+
+      // 否则，为老的navigator.getUserMedia方法包裹一个Promise
+      return new Promise(function(resolve, reject) {
+        getUserMedia.call(navigator, constraints, resolve, reject);
+      });
+    };
+  }
+  // let that = this;
+  navigator.mediaDevices
+    .getUserMedia({ audio: audioFlag, video: videoFlag })
+    .then(function(stream) {
+      var video = document.getElementById(elementId);
+      // 旧的浏览器可能没有srcObject
+      if ("srcObject" in video) {
+        video.srcObject = stream;
+      } else {
+        // 防止再新的浏览器里使用它，应为它已经不再支持了
+        video.src = window.URL.createObjectURL(stream);
+      }
+      // return true;
+      // video.onloadedmetadata = function(e) {
+      //   video.play();
+      // };
+      // alert("ssss");
+      showBox(that, showId);
+    })
+    .catch(function(err) {
+      alert(err.name + ": " + err.message);
+      that.$messagebox.alert("当前设备不支持语音输入！");
+    });
+};
+/**
+ * 开始录音
+ */
+const readyRecord = function(that, elementId, audioId, showId) {
+  document.oncontextmenu = function(e) {
+    e.preventDefault();
+  };
+  let obj = document.getElementById(elementId);
+  obj.addEventListener("touchstart", function(event) {
+    initMedia(that, audioId, showId, true, true);
+  });
+
+  obj.addEventListener("touchend", function() {
+    hideBox(that, showId);
+  });
+};
+const hideBox = function(that, showId) {
+  let obj = document.getElementById(showId);
+  obj.innerHTML = "";
+  if (intervalHandle) {
+    clearInterval(intervalHandle);
+    intervalHandle = null;
+  }
+};
+/**
+ * 展示录音状态框框
+ */
+const showBox = function(that, showId) {
+  var totalN = 5;
+  console.log("showId=" + showId);
+  let obj = document.getElementById(showId);
+  let htmlStr =
+    "<div id='wenwenMediaBox' style='width:30vw;height:30vw;border-radius: 30vw;position:fixed;top:40vh;left:35vw;z-index:100000;overflow:hidden;'>";
+  htmlStr +=
+    "<div style='width:100%;height:100%;background:black;opacity:0.5;'></div>";
+    // justify-content: center;justify-items: center;align-content: center;align-items: center;'>
+  htmlStr +=
+    "<div style='position:absolute;top:5%;left:5%;width:90%;height:90%;border:2px solid red;border-radius:100%;";
+  for (var i = 0; i < totalN; i++) {
+    htmlStr +=
+      "<div style='text-align:center;width:100%;margin-top:1%;'><span id='wenwenMedia" +
+      i +
+      "' style='display:inline-block;background:white;height:8%;width:0px;opacity:.8;border-radius:5vw;'>"+i+"</span></div>";
+  }
+  htmlStr += "</div>";
+  htmlStr += "</div>";
+  // alert(htmlStr);
+  obj.innerHTML = htmlStr;
+  let maxWidth = document.getElementById("wenwenMediaBox").offsetWidth;
+
+  // alert(maxWidth);
+  if (!intervalHandle) {
+    intervalHandle = setInterval(function() {
+      for (var i = 0; i < totalN; i++) {
+        let width = randomNum(0, maxWidth);
+        document.getElementById("wenwenMedia" + i).style.width = width + "px";
+      }
+    }, 100);
+  }
+};
+/**
+ * 生成随机数
+ */
+function randomNum(minNum, maxNum) {
+  switch (arguments.length) {
+    case 1:
+      return parseInt(Math.random() * minNum + 1, 10);
+      break;
+    case 2:
+      return parseInt(Math.random() * (maxNum - minNum + 1) + minNum, 10);
+      break;
+    default:
+      return 0;
+      break;
+  }
+}
+export default {
+  initMedia,
+  readyRecord,
+  showBox,
+  hideBox,
+  intervalHandle,
+};
+</script>

@@ -1,0 +1,457 @@
+<template>
+<div>
+  <div class="header">
+    <dentGameHeader v-on:onSubSelect="onSwitch"
+                    v-on:onClickRightIcon="onClickRightIcon"
+                    :obj="bjpk10odds"
+                    gameName="bjpk10"
+                    subType="multipleSub"
+                    rightNormal="true">
+      <span slot="tips">玩法</span>
+    </dentGameHeader>  
+  <!-- </div>
+     <div class="flex-wrap flex flow-col">
+       <p class="openheader">2018096开奖</p>
+       <span class="nowdate">当前期:<p style="color:red; padding-top: 2px;">2018097</p><p>期</p></span>
+       <span class="beformtime">截止：<p style="color: red;padding-top: 2px;">00:00:32</p></span>
+     </div>
+       <div>
+       <mt-navbar class="wanfaheader" v-model="selected" style="z-index: 10" >
+          <mt-tab-item id="1">双面玩法</mt-tab-item>
+          <mt-tab-item id="2">数字</mt-tab-item>
+          <mt-tab-item id="3">冠亚和</mt-tab-item>
+       </mt-navbar>
+       </div>
+       <div>
+      <mt-tab-container v-model="selected" class="wanfaheader"   >
+        <mt-tab-container-item id="1" >
+         <div class="first  bgc-fff  " v-for="n in 10" :key="n">
+           <span v-if="n == 1 " >冠军</span>
+           <span v-else-if="n == 2 " >亚军</span>
+           <span v-else >第{{n}}名</span>
+         </div>
+         <div class="first-one bgc-fff"  v-for="n in 10" :key="n" :style="marginTop(n)">
+           <table class="first-two  bgc-fff"  v-if="n<7" >
+             <tr>
+               <td>大</td>
+               <td>单</td>
+               <td>龙</td>
+               </tr>
+               <tr>
+               <td>小</td>
+               <td>双</td>
+               <td>虎</td>
+             </tr>
+           </table>
+          <table v-if="n>6" class="first-third">
+            <tr>
+              <td>大</td>
+              <td>单</td>
+              </tr>
+              <tr>
+              <td>小</td>
+              <td>双</td>
+            </tr>
+          </table>
+         </div>
+        </mt-tab-container-item>
+
+
+        <mt-tab-container-item id="2" >
+          <div class="second   bgc-fff " v-for="n in 10" :key="n" >
+           <p v-if="n == 1 " >冠军</p>
+           <span v-else-if="n == 2 " >亚军</span>
+           <span v-else >第{{n}}名</span>
+          </div>
+          <div >
+            <table class="second-one">
+              <tr>
+                <td>大</td>
+                <td>小</td>
+              </tr>
+              <tr>
+                <td>单</td>
+                <td>双</td>
+              </tr>              
+            </table>
+            <table class="second-two">
+              <tr>
+                <td>龙</td>
+                <td>虎</td>
+              </tr>
+            </table>
+          </div>
+        </mt-tab-container-item>
+        <mt-tab-container-item id="3">
+          <div>
+          <div v-for="n in 19" v-if="n>2" :key="n" class="third-one">
+            <span >{{n}}</span>
+          </div>
+          <table class="third-two" >
+              <tr>
+                <td>和大</td>
+                <td>和小</td>
+              </tr>
+              <tr>
+                <td>和单</td>
+                <td>和双</td>
+              </tr>              
+            </table>
+          </div>
+        </mt-tab-container-item>
+      </mt-tab-container>
+      <footer>
+      <div>
+        <table class="footer">
+          <tr>
+            <td>
+              共1注：100.00
+            </td>
+          </tr>
+          <tr>
+            <td>每注金额</td>
+          </tr>
+          <tr>
+            <td>下注</td>
+          </tr>
+          <tr>
+            <td>重置</td>
+          </tr>
+        </table>
+      </div>
+      </footer>
+     </div> -->
+</div>
+
+
+      <!-- 开奖相关信息 -->
+      <div class="open">
+        <div class="time-left flex flow-col justify-sa">
+          <p style="margin-top: -8px" >距离第n期截止时间</p>
+          <div class="count-down font-theme">
+            00:00:00
+          </div>
+        </div>
+        <div dentHoverclass="hoverclass"
+             class="open-num flex flow-col justify-sa">
+          <template >
+            <p >第n期<span 
+                    class="iconfont icon-arrow-down"></span> </p>
+          </template>
+          <mt-spinner color="#e62b00" type="fading-circle"></mt-spinner>
+        </div>
+
+        <div>
+          <p class="peilv" >赔率：9.800</p>
+          <p class="wanfa">玩法提示 ></p>
+        </div>
+        <div  class="fixheader bgc-fff  " v-for="n in 10" :key="n" >
+           <p class="ranking" v-if="n == 1 " >冠军</p>
+           <p class="ranking" v-else-if="n == 2 " >亚军</p>
+           <p class="ranking" v-else-if="n == 3 " >季军</p>
+           <p class="ranking" v-else >第{{n}}名</p>
+           <span>全</span>
+           <span>大</span>
+           <span>小</span>
+           <span>单</span>
+           <span>双</span>
+           <span>清</span>
+          <div class="flex" style=" margin: 0 -8px;flex-wrap: wrap;overflow: hidden; margin-bottom: 20vw;">
+          <div class="numberinfo" v-for="m in 10" :key="m">
+            <p v-if="m!=10"  class="numbercss"> 0{{m}} </p>
+            <p v-if="m===10" class="numbercss">{{m}}</p>
+          </div>
+          </div>
+
+           
+        </div> 
+    </div>
+  </div>
+</template>
+
+
+    
+<script>
+import dentGameHeader from "@/components/common/dentGameHeader";
+import { bjpk10 } from '@/js/keyToCharacter';
+import { bjpk10odds } from "@/js/bjpk10-odds";
+export default {
+  name:'bjpk10',
+  components: {
+    dentGameHeader,
+  },
+  data() {
+    return {
+      bjpk10,
+      currentOdds:'',
+      bjpk10odds,
+    };
+  },
+  created () {
+    this.$parent.tabbarShow = false;
+  },
+  methods: {
+    //切换不同的玩法
+    onSwitch(val) {
+      this.currentOdds = val;
+      //将激活的tab改为0 ，清空下注信息
+      this.shouldCommit = [];
+    },
+  }
+};
+</script>
+
+<style scoped>
+
+/* 
+.flex-wrap {
+  position: absolute;
+  margin-top: 15vw;
+  border-bottom: 10px solid rgb(231, 227, 227);
+  padding-bottom: 17px;
+  width: 100%;
+}
+.openheader {
+  margin-left: -75vw;
+}
+.nowdate {
+  margin-top: 10vw;
+  margin-left: -44vw;
+  float: left;
+  width: 50%;
+  display: flex;
+  flex-direction: row
+}
+.beformtime {
+  position: absolute;
+  margin-top: 15vw;
+  margin-left: 40vw;
+  width: 100%;
+  display: flex;
+
+}
+.wanfaheader {
+  position: absolute;
+  border: 1px solid rgb(231, 227, 227);
+  margin-top: 47vw;
+  width: 100%;
+}
+.champion {
+  position: absolute;
+  text-align: center;
+}
+.first {
+  width: 100%;
+  height: 8vw;
+  flex-flow: column;
+  margin-top: 23.21vw;
+  background: #bfdfdfe3;
+  padding: 4px 8px;
+  border: solid 1px #bbb9b9;
+}
+.first:nth-child(10) {
+  margin-bottom: 35vw;
+ 
+}
+.first-one {
+  position: absolute;
+  margin-top:-316vw;
+  display: flex;
+  width: 100%;
+}
+.first-two {
+  border-collapse: collapse;
+  width: 100%;
+  line-height: 5vw;
+}
+.first-third {
+  width: 100%;
+  border-collapse: collapse
+}
+.second {
+  margin-right: 64vw;
+  border: solid 1px #bbb9b9;
+  height: 12vw;
+  width: 32%;
+  padding-top: 3vw;
+}
+.second:nth-child(1) {
+  margin-top: 17vw;
+}
+.second-one {
+  width: 63%;
+  position: relative;
+  margin-bottom: 28vw;
+  top: -120vw;
+  margin-left: 36vw;
+  border-collapse: collapse;
+}
+.second-two {
+  width: 63%;
+  position: relative;
+  margin-bottom: 28vw;
+  top: -146vw;
+  margin-left: 36vw;
+  border-collapse: collapse;
+}
+.third-one {
+  float: left;
+  width: calc(100%/3);
+  line-height: 14vw;
+  border: solid #e7e3e3;
+  border-width: 0 1px 1px 0;
+  text-align: left;
+  padding: 0 16px;
+}
+.third-two {
+  padding-top: 15vw;
+  width: 100%;
+
+}
+.table,
+tr,
+td {
+  border: solid 1px #bbb9b9;
+  text-align: left;
+  padding: 13px 17px;
+}
+/* 
+.hecai-bottom {
+  width: 100%;
+  padding: 2vw 2vw;
+  line-height: 6.5vw;
+  border-top: 1px solid #e1e1e1;
+}
+.theme-hoverclass {
+  background: rgba(230, 65, 0, 0.2) !important;
+}
+.hecai-btn {
+  border: 1px solid;
+  padding: 0 3vw;
+  border-radius: 4px;
+      z-index: 10;
+    margin-top: 175vw;
+}
+.bets-per-gold input {
+  margin: 0 1vw;
+  width: 15vw;
+  border: 1px solid #d4d4d4;
+  line-height: 6.5vw;
+  color: #e64600;
+  border-radius: 4px;
+  transition: 0.5s;
+}
+.bets-per-gold input:focus {
+  border-color: currentColor;
+}
+.footer {
+  position: fixed;
+  z-index: 9999;
+  margin-top:172vw;
+
+} */
+
+
+.header {
+  position: absolute;
+  z-index: 10;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 13.8vw;
+  line-height: 13.8vw;
+  background: #57d6dd;
+  color: #fff;
+}
+.openinfo {
+  width: 100%;
+  height: 24vw;
+  border-right: 1px solid #c9c9c9;
+}
+.open {
+  position: absolute;
+  width: 100%;
+  height: 20vw;
+  border-bottom: 1px solid #c9c9c9;
+  margin-top: 17vw;
+}
+.time-left {
+  width: 36vw;
+  padding-right: 3vw;
+  height: 14.4vw;
+  border-right: 1px solid #c9c9c9;
+}
+.count-down {
+  font-size: 3.73vw;
+  letter-spacing: 0.1em;
+}
+
+.fixheader {
+  width: 89%;
+  height: 32%;
+  border-radius: 3vw;
+  margin-left: 9%;
+  flex-flow: column;
+  margin-top: 87px;
+  background: #e5e5e5;
+  padding: 0 8px;
+  text-align-last: justify;
+  border: solid 1px #bbb9b9;
+}
+.ranking {
+  position: absolute;
+  left: 11px;
+  width: 3vw;
+  margin-top: -2vw;
+}
+.peilv {
+  position: absolute;
+  color: red;
+  margin-top: 11vw;
+  left: -8px;
+  border: solid 1px #c9c9c9;
+  background-color: #c9c9c9;
+  border-radius: 2vw;
+  width: 24vw;
+}
+.wanfa {
+  position: absolute;
+  right: -4px;
+  margin-top: 11vw;
+  width: 22%;
+  border-radius: 2vw;
+  border: solid 1px #c9c9c9;
+  background-color: #d6d4d4;
+}
+.numbercss {
+  font-size: 4.5vw;
+  height: 10%;
+  border: solid 1px #c9c9c9;
+  border-radius: 50%;
+  padding: 4px;
+}
+.numberinfo {
+  position: relative;
+  float: left;
+  margin-top: 3.2vw;
+  margin-left: 8.7vw;
+}
+.numberinfo:nth-child(6n + 1) {
+  margin-left: 0;
+}
+.open-num {
+  flex: 1;
+  height: 20vw;
+  position: absolute;
+  right: 122px;
+  top: -9px;
+}
+.open-num .icon-arrow-down {
+  position: absolute;
+  font-size: 3.2vw;
+  transition: 0.5s;
+}
+.example-title .iconfont {
+  margin-right: 1.3vw;
+} 
+</style>

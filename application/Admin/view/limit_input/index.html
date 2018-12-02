@@ -1,0 +1,125 @@
+{include file='public/header' /}
+<section class="admin-input-limit-middle">
+	<form id="admin-input-limit-middle-form" method="post">
+		<input type="hidden" name="id" value="{$info.id}">
+		<ul class="admin-input-limit-middle-ul">
+			<li>
+				<span>过滤模式：</span>
+				<select name="filter_mod" onchange="changeFilterMode(this)">
+					<option {if $info['filter_mod']==1}selected="selected"{/if} value="1">替换</option>
+					<!-- <option {if $info['filter_mod']==2}selected="selected"{/if} value="2">禁止输入</option> -->
+					<!-- <option {if $info['filter_mod']==1}selected="selected"{/if} value="1">禁止输入</option> -->
+					<option {if $info['filter_mod']==3}selected="selected"{/if} value="3">禁止发布</option>
+					<option {if $info['filter_mod']==0}selected="selected"{/if} value="0">关闭</option>
+				</select>
+			</li>
+			<li id="content-replace-word" {if $info['filter_mod']==1}class="show"{else/}class="hide"{/if}>
+				<span>替换内容：</span>
+				<input type="text" name="filter_replace" value="{$info.filter_replace}">
+			</li>
+			<li id="show-key-word" {if $info['filter_mod']==3}class="show "{else/}class="hide"{/if}>
+				<span>显示字眼：</span>
+				<select name="filter_show">
+					<option {if $info['filter_show']==1}selected="selected"{/if} value="1">开启</option>
+					<option {if $info['filter_show']==0}selected="selected"{/if} value="0">关闭</option>
+				</select>
+			</li>
+			<li>
+				<span>过滤字眼：</span>
+				<div>
+					<textarea name="filter_words" placeholder="多个字眼用‘|’隔开">{$info.filter_words}</textarea>
+				</div>
+				<span style="color:red;font-size: 1.5vw;margin-left: 3.5vw;">注意:不可回车换行，关键词之间用“|”隔开。</span>
+			</li>
+			<li>
+				<span>阻止提示：</span>
+				<div>
+					<textarea name="filter_tips">{$info.filter_tips}</textarea>
+				</div>
+			</li>
+			<li>
+				<span>允许次数：</span>
+				<input type="text" name="filter_allow" value="{$info.filter_allow}">
+				<!-- <input type="text" name="old_filter_allow" value="{$info.filter_allow}" style="opacity:0 !important; position:absolute;"> -->
+			</li>
+			<li>
+				<span>自动加黑：</span>
+				<select name="defriend_mod">
+					<option {if $info['defriend_mod']==1}selected="selected"{/if} value="1">禁止发言</option>
+					<option {if $info['defriend_mod']==2}selected="selected"{/if} value="2">禁止登陆</option>
+					<option {if $info['defriend_mod']==0}selected="selected"{/if} value="0">关闭</option>
+				</select>
+			</li>
+			<li>
+				<span>通知版主：</span>
+				<select name="filter_notice">
+					<option {if $info['filter_notice']==1}selected="selected"{/if} value="1">开启</option>
+					<option {if $info['filter_notice']==0}selected="selected"{/if} value="0">关闭</option>
+				</select>
+			</li>
+			<li style="padding: 0px;">
+				<button type="button" onclick="submitForm('admin-input-limit-middle-form','{:url("Admin/LimitInput/index")}')">确定</button>
+			</li>
+		</ul>
+	</form>
+</section>
+<script>
+	function hideReplace(){
+		console.log('hideReplace');
+		var obj = document.querySelector('#content-replace-word').classList;
+		obj.remove('show');
+		obj.add('hide');
+	}
+
+	function showReplace(){
+		console.log('showReplace');
+		var obj = document.querySelector('#content-replace-word').classList;
+		obj.remove('hide');
+		obj.add('show');
+	}
+
+	function hidekey(){
+		console.log('hidekey');
+		var obj = document.querySelector('#show-key-word').classList;
+		obj.remove('show');
+		obj.add('hide');
+	}
+
+	function showkey(){
+		console.log('showkey');
+		var obj = document.querySelector('#show-key-word').classList;
+		obj.remove('hide');
+		obj.add('show');
+	}
+	
+	function changeFilterMode(e){
+		console.log(e.value);
+		switch(parseInt(e.value)){
+			case 0:
+				console.log('goto:0')
+				hideReplace();
+				hidekey();
+				break;
+			case 1:
+				console.log('goto:1')
+				showReplace();
+				hidekey();
+				break;
+			case 2:
+				console.log('goto:2')
+				hidekey();
+				hideReplace();
+				break;
+			case 3: 
+				console.log('goto:3')
+				showkey();
+				hideReplace();
+				break;
+			default: 
+			console.log('goto:default')
+
+		}
+	}
+	
+</script>
+{include file='public/footer' /}

@@ -1,0 +1,476 @@
+<template>
+  <div class="contanier">
+
+    <!-- 固定表头 -->
+    <dentGameHeader v-on:onSubSelect="onSwitch"
+                    v-on:onClickRightIcon="onClickRightIcon"
+                    :obj="jsksobj"
+                    subType="multipleSub"
+                    rightNormal="true">
+      <span slot="tips">玩法</span>
+    </dentGameHeader>
+
+    <div class="flex-wrap flex flow-col">
+      <!-- 开奖相关信息 -->
+      <div class="open flex bgc-fff">
+        <div class="time-left flex flow-col justify-sa">
+          <p class="fz12">距离8114期截止时间</p>
+          <div class="font-theme">
+            {{timer.timeToOpen}}
+          </div>
+        </div>
+        <div @click="openLately=!openLately"
+             dentHoverclass="hoverclass"
+             class="open-num flex flow-col justify-sa">
+          <p class="flex">第8113期 <span :class="openLately?'_arrow-down':''"
+                  class="iconfont icon-arrow-down"></span> </p>
+          <openNum :arr=[42,19,29,7,19,9,41]></openNum>
+        </div>
+      </div>
+      <!-- 近期开奖 -->
+      <div :class="openLately?'open-lately-expand':''"
+           class="open-lately">
+        <table style="width: 120%;">
+          <colgroup>
+            <col width='18%'>
+            <col width='40%'>
+            <col width='14%'>
+            <col width='14%'>
+            <col width='14%'>
+          </colgroup>
+          <thead>
+            <tr class="bg-grey">
+              <th>期次</th>
+              <th>开奖号码</th>
+              <th>五行</th>
+              <th>特头</th>
+              <th>特尾</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>8114期</td>
+              <td>
+                <openNum :arr=[42,19,29,7,39,9,41]></openNum>
+              </td>
+              <td>木</td>
+              <td>头0</td>
+              <td>尾8</td>
+            </tr>
+            <tr class="bg-grey">
+              <td>8114期</td>
+              <td>
+                <openNum :arr=[45,18,44,7,27,9,15]></openNum>
+              </td>
+              <td>木</td>
+              <td>头0</td>
+              <td>尾8</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 下注信息展示区 -->
+      <div class="odds-wrap flex flow-col">
+        <!-- :betsObj="odds[currentOdds]" -->
+        <bets v-model="shouldCommit"
+              :currentOdds="currentOdds"
+              v-on:oddsTips="oddsTips=!oddsTips"></bets>
+
+        <!-- 下了几注展示 -->
+        <transition name="slideUp">
+          <div v-show="totalBets"
+               class="bets-total flex justify-sb">
+            <div>
+              <span>共<span class="font-theme">{{totalBets}}</span>注</span>
+              <span>共<span class="font-theme">{{totalBets*default_gold}}</span>元</span>
+            </div>
+            <span>单注最多可盈利<span class="font-theme">3.960</span>元</span>
+          </div>
+        </transition>
+
+      </div>
+
+      <!-- 底部下注栏 -->
+      <div class="hecai-bottom flex justify-sb bgc-fff">
+        <div v-if="totalBets"
+             class="hecai-btn random-btn">清空</div>
+        <div v-else
+             class="hecai-btn random-btn">机选</div>
+
+        <div class="bets-per-gold">单注<input v-model="default_gold"
+                 type="text">元</div>
+
+        <div v-if="totalBets"
+             class="hecai-btn submit-btn cansubmit">确定</div>
+        <div v-else
+             class="hecai-btn submit-btn">确定</div>
+      </div>
+
+    </div>
+
+  </div>
+</template>
+
+<script>
+import dentGameHeader from "@/components/common/dentGameHeader";
+import bets from "./compoent-bets";
+import { jsksobj } from "@/js/jsks";
+
+export default {
+  components: {
+    dentGameHeader,
+    bets
+  },
+  data() {
+    return {
+      /* 数据相关 */
+      odds:{},  //全部赔率信息
+      jsksobj, //用于生成子玩法的对象
+      currentOdds: '',  //当前选择的大玩法（默认第一种）
+      default_gold: 2,  //每单的金额
+      shouldCommit:[],  //两面的下注信息
+      totalBets:0,  //下了多少注
+
+      /* 状态相关 */
+      activeTab: 0,  //当前激活的 子玩法的id
+      openLately: false,  //近期开奖 展示收起
+      oddsTips: false, //玩法规则 弹窗
+      timer:{}
+    }
+  },
+  computed:{},
+  mounted: function() {
+    this.$parent.tabbarShow = false;
+    this.getOddsData();
+  },
+  methods: {
+
+    //切换不同的玩法
+    onSwitch(val) {
+      this.currentOdds = val;
+      //将激活的tab改为0 ，清空下注信息
+      this.activeTab = 0;
+      this.shouldCommit = [];
+    },
+
+    //请求 赔率 数据
+    getOddsData() {
+      let haveCache = !!this.getLocalCache('jsks-odds');
+      let version = haveCache ? this.getLocalCache('jsks-version') : -1;
+      let gameGongHost  = this.GLOBAL.gameGongHost;
+      const sendDataToServer = () => {
+        this.senddata({type:"deskInfo",game:'Jsks',version});
+      }
+
+      //请求数据
+      if (!this.GLOBAL.gameSocketHand) {
+        this.createSocket('ws://192.168.2.100:2525', () => {
+          this.dealOnMessage();
+          sendDataToServer();
+        });
+      } else {
+        this.dealOnMessage();
+        sendDataToServer();
+      }
+
+    },
+
+    //处理返回的数据
+    dealOnMessage() {
+      this.onmessage( res => {
+        res = JSON.parse(res);
+        //保持心跳
+        if(res.code === 'pong'){ this.senddata({type:"ping"}) };
+        //最新期号
+        if(res.issue){
+          this.nextIssue = res.issue;
+          this.GLOBAL.hecai.issue = res.issue;
+        };
+        //处理赔率信息
+        if(res.deskInfo) deskInfoFunc.call(this);
+        //处理 近期开奖信息
+        if(res.recentInfo) recentInfoFunc.call(this);
+        //countdown 启动倒计时
+        if(res.countdown){
+          console.log('服务器发来下期开奖时间戳 '+ new Date(res.countdown*1000).Format('yyyy-MM-dd hh:mm:ss'))
+          this.GLOBAL.hecai.countdown = res.countdown*1000;
+          this.countTime(res.countdown*1000,'timeToOpen');
+        };
+
+        function deskInfoFunc(){
+          //对比 version 版本号
+          let serverVersion = res.deskInfo.version;
+          let localVersion = this.getLocalCache('jsks-version')+'' || -1;
+
+          if(serverVersion > localVersion) {
+            ['odds','version'].forEach(key => {
+              if(res.deskInfo[key] !== undefined){
+                this[key] = res.deskInfo[key];
+                this.setLocalCache('jsks-'+key,res.deskInfo[key]);
+              }
+            })
+          }else if(serverVersion == localVersion){
+            ['odds','version'].forEach(key => {
+              this[key] = this.getLocalCache('jsks-'+key);
+            })
+            console.log('%c 江苏快三赔率没有更改，从localStorage读取','color: red;');
+          }
+        }
+
+        function recentInfoFunc(){
+          console.log('%c 更新开奖信息','color: red;');
+          this.recentInfo = res.recentInfo;
+        };
+
+      })
+    },
+
+    // endTimeStamp时间戳 dataStr...
+    countTime(endTimeStamp,dataStr) {
+      console.log('开启倒计时');
+      let setTimer = () => {
+        let leftTime = endTimeStamp - new Date().getTime(); //时间差
+        //定义变量 d,h,m,s保存倒计时的时间
+        let d,h,m,s;
+        function toFix(str){
+          return str < 10 ? '0' + str : str;
+        }
+        if (leftTime>=0) {
+            // d = Math.floor(leftTime/1000/60/60/24);
+            h = toFix(Math.floor(leftTime/1000/60/60%24));
+            m = toFix(Math.floor(leftTime/1000/60%60));
+            s = toFix(Math.floor(leftTime/1000%60));
+            // console.log(`${h}:${m}:${s}`);
+            this.$set(this.timer,dataStr,`${h}:${m}:${s}`)
+        }else {
+           clearInterval(this.timer[ dataStr + 'Interval']);
+           //开始下一期的倒计时
+           this.nextIssue += 1;
+           this.countTime(endTimeStamp + 10 * 60 * 1000,dataStr)
+        }
+      }
+      setTimer();
+      this.timer[dataStr + 'Interval'] = setInterval(setTimer,1000);
+    },
+
+  },
+
+  watch: {
+    // watch shouldCommit 用户的下注信息 做相应的处理
+    shouldCommit(newVal) {
+      let totalBets = 0;
+      // 不同的玩法 选择不同的计算注数计算方式
+      switch( this.currentOdds ) {
+        case "lm":
+            totalBets += newVal.length;
+          break;
+      }
+
+      this.totalBets = totalBets;
+    },
+  }
+}
+</script>
+
+<style scope>
+.hoverclass {
+  background: rgba(230, 70, 0, 0.1);
+}
+.slideUp-enter-active,
+.slideUp-leave-active {
+  will-change: transform;
+  transition: 0.35s;
+  transform: translate3d(0, 0, 0);
+}
+.slideUp-enter,
+.slideUp-leave-to {
+  transform: translate3d(0, 100%, 0);
+}
+
+.fadeIn-enter-active,
+.fadeIn-leave-active {
+  will-change: opacity;
+  transition: opacity 500ms;
+}
+.fadeIn-enter,
+.fadeIn-leave-to {
+  opacity: 0;
+}
+.contanier {
+  padding-top: 13.8vw;
+  background: #ffffff;
+}
+.flex-wrap {
+  height: calc(100vh - 13.8vw);
+}
+.fz12 {
+  font-size: 12px;
+}
+.hidden {
+  display: none;
+}
+.odds-wrap {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  overflow: auto;
+}
+.mint-tab-container {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+.mint-tab-container-wrap {
+  height: 100%;
+}
+/* 开奖信息 */
+.open {
+  width: 100%;
+  height: 24vw;
+}
+.time-left {
+  width: 36vw;
+  padding-right: 3vw;
+  height: 14.4vw;
+  border-right: 1px solid #ebebeb;
+}
+.open-num {
+  flex: 1;
+  height: 20vw;
+}
+.open-num .icon-arrow-down {
+  font-size: 12px;
+  transition: 0.5s;
+}
+._arrow-down {
+  transform: rotate(180deg);
+}
+.balls-item,
+.balls-spec-item {
+  margin: 0.5vw;
+  width: 6vw;
+  height: 6vw;
+  background: #e64600;
+  font-size: 12px;
+  line-height: 6vw;
+  text-align: center;
+  color: #fff;
+  border-radius: 50%;
+}
+.balls-spec-item {
+  background: #008000;
+}
+.balls-text {
+  color: #535353;
+}
+.balls-link {
+  position: relative;
+  top: -0.5em;
+  margin: 1vw;
+}
+
+.open-lately {
+  width: 100%;
+  transition: 0.5s;
+  max-height: 1px;
+  overflow: auto;
+}
+.open-lately-expand {
+  max-height: 100vh;
+}
+table {
+  border-spacing: 0;
+  border-collapse: collapse;
+  background: #fff;
+  border-bottom: 1px solid #dedede;
+  color: #8994b1;
+}
+.open-lately th {
+  line-height: 7.8vw;
+  font-weight: normal;
+}
+.bg-grey {
+  background: #f2f5f8;
+}
+
+/* 下注总信息 */
+.bets-total {
+  width: 100%;
+  padding: 0 2vw;
+  background: #eee;
+  line-height: 8vw;
+}
+
+/* 底部固定栏 */
+.hecai-bottom {
+  width: 100%;
+  padding: 2vw 2vw;
+  line-height: 6.5vw;
+  border-top: 1px solid #e1e1e1;
+}
+.hecai-btn {
+  border: 1px solid;
+  padding: 0 3vw;
+  border-radius: 4px;
+}
+.random-btn {
+  background: #ffefef;
+  color: #e64100;
+  border-color: #e64100;
+}
+.submit-btn {
+  background: #eee;
+  border-color: #eee;
+  color: #afafaf;
+  transition: 0.5s;
+}
+.cansubmit {
+  background: #e64600;
+  border-color: #e64600;
+  color: #fff;
+}
+.bets-per-gold input {
+  margin: 0 1vw;
+  width: 15vw;
+  border: 1px solid #d4d4d4;
+  line-height: 6.5vw;
+  color: #e64600;
+  border-radius: 4px;
+  transition: 0.5s;
+}
+.bets-per-gold input:focus {
+  border-color: currentColor;
+}
+
+/* 玩法规则弹窗 */
+.modal {
+  transition: 0.25s;
+}
+.fadeIn-enter .modal {
+  transform: translate3d(100%, 0, 0);
+}
+.fadeIn-leave-active .modal {
+  transform: translate3d(100%, 0, 0);
+}
+.example-modal .modal-title {
+  background: #e64600;
+  color: #fff;
+  line-height: 40px;
+}
+.example-modal .modal-body {
+  padding: 10px;
+  padding-bottom: 30px;
+}
+.example-title {
+  line-height: 2;
+  font-weight: bold;
+}
+.example-title .iconfont {
+  margin-right: 5px;
+}
+.example-content {
+  padding: 0 1.5em 0;
+  font-size: 14px;
+}
+</style>

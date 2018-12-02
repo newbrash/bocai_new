@@ -1,0 +1,293 @@
+<template>
+  <div class="contanier">
+    <!-- 导航栏 -->
+    <mt-header title="档期注单"
+               fixed="true">
+      <a slot="left"
+         @click="onClickBack">
+        <mt-button icon="back"></mt-button>
+      </a>
+    </mt-header>
+
+    <div class="bets-counts">
+      <p class="fl">注单数：15</p>
+      <p class="fl bets-gold">下注金额：<span class="font-theme">15260</span></p>
+    </div>
+
+    <table class="dent-table">
+      <COLGROUP>
+        <col width="25%">
+        <col width="15%">
+        <col width="15%">
+        <col width="25%">
+        <col width="25%">
+      </COLGROUP>
+      <thead>
+        <tr>
+          <th>注单号</th>
+          <th>下注时间</th>
+          <th>下注类型</th>
+          <th>可赢金额</th>
+          <th>下注金额</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="tr in currentBets"
+            @click="getListData(tr.bId)">
+          <td class="font-theme">20180907</td>
+          <td>{{tr.bTime}}</td>
+          <td>{{tr.bType | keyToCharacter}}</td>
+          <td class="font-theme">{{tr.bWinGold}}</td>
+          <td class="font-theme">{{tr.bGold}}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- 一个大注单 -->
+    <div v-show="currentBetsListShow"
+         class="bets-list">
+      <template v-for="(value,key) in currentBetsList">
+        <div v-for="(subValue,subKey) in value"
+             @click="showOrderDtail(key,subKey)"
+             class="list-item flex justify-sb fz-14">
+          <span><span>{{key|keyToCharacter}}</span>-<span>{{subKey|keyToCharacter}}</span></span>
+          <span class="font-theme">{{subValue.gold}}</span>
+        </div>
+      </template>
+    </div>
+
+    <!-- 详细注单 -->
+    <div v-show="orderDetailShow"
+         class="betView flex flow-col">
+
+      <p class="game-name">广东11选5</p>
+      <p class="game-type font-theme">{{currentTtype|keyToCharacter}}</p>
+      <div class="betView-detail flex flow-col">
+        <div class="flex">
+          <span class="fz-14 fontc-3">投注号码：</span>
+          <p class="fz-14 fontc-6">{{translate(orderDtail.number)}}</p>
+        </div>
+        <div class="flex">
+          <span class="fz-14 fontc-3">投注单号：</span>
+          <p class="fz-14 fontc-6">{{orderDtail.bet}}</p>
+        </div>
+        <div class="flex">
+          <span class="fz-14 fontc-3">投注时间：</span>
+          <p class="fz-14 fontc-6">{{orderDtail.time}}</p>
+        </div>
+        <div class="flex">
+          <span class="fz-14 fontc-3">投注名称：</span>
+          <p class="fz-14 fontc-6">{{orderDtail.type|keyToCharacter}}</p>
+        </div>
+        <div class="flex">
+          <span class="fz-14 fontc-3">投注金额：</span>
+          <p class="fz-14 fontc-6">{{orderDtail.gold}}</p>
+        </div>
+        <div class="flex">
+          <span class="fz-14 fontc-3">投注赔率：</span>
+          <p class="fz-14 fontc-6">{{orderDtail.odds}}</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</template>
+
+<script>
+import { keyToCharacter } from '@/js/11xuan5'
+
+export default {
+  filters: {
+    // 键值转成中文
+    keyToCharacter: function (value) {
+      let character = '';
+      for( let key in keyToCharacter){
+        if( key === value ) {
+          character = keyToCharacter[key]
+          break;
+        }
+      }
+
+      return character;
+    }
+  },
+  data(){
+    return{
+      /* 数据相关 */
+      currentBets:[], //当期全部大注单
+      currentBetsList:{}, //一个大注单
+      orderDtail:{},  //订单详细信息
+      currentTtype: '', //订单详细信息的大玩法
+
+      /* 状态相关 */
+      currentBetsListShow:false,
+      orderDetailShow:false
+    }
+  },
+  methods:{
+
+    //点击返回按钮
+    onClickBack(){
+      if( this.orderDetailShow ) {
+        this.orderDetailShow = false;
+        return;
+      }
+      if( this.currentBetsListShow ) {
+        this.currentBetsListShow = false;
+        return;
+      }
+
+      this.$router.go(-1);
+    },
+
+    //展示详细订单
+    showOrderDtail(key,subKey){
+      this.orderDtail = this.currentBetsList[key][subKey];
+      this.currentTtype = key;
+      this.orderDetailShow = true;
+    },
+
+    //请求 并展示 一个大注单
+    getListData(bId){
+      this.senddata({type:"betViewDetail",game:'GD',bId})
+      this.currentBetsListShow = true;
+    },
+
+    //请求 当期全部注单
+    getOddsData() {
+      // 用户id
+      let userInfo = JSON.parse(localStorage.getItem('bc_userInfo'));
+      let { id } = userInfo;
+      // 期号
+      let issue = this.$route.query.issue;
+      let sendDataToServer = () => {
+        this.senddata({type:"bview",game:'GD',uid:id,issue});
+      }
+
+      //请求数据
+      if (!this.GLOBAL.gameSocketHand) {
+        let wanglangDent = 'ws://192.168.2.136:2525'
+        this.createSocket(wanglangDent, () => {
+          this.dealOnMessage(); //创建连接成功之后 监听返回的信息
+          sendDataToServer();
+        });
+      } else {
+        this.dealOnMessage(); //创建连接成功之后 监听返回的信息
+        sendDataToServer();
+      }
+    },
+
+    //处理返回的数据
+    dealOnMessage() {
+      this.onmessage( (res) => {
+        res = JSON.parse(res);
+        //保持心跳
+        if(res.code === 'pong'){
+          this.senddata({type:"ping"});
+          return;
+        }
+
+        if( res instanceof Array ) {
+          this.currentBets = res;
+        }
+
+        if(res instanceof Object) {
+          this.currentBetsList = res;
+        }
+      })
+    },
+
+    //当详细注单为两面盘 将投注号码翻译为中文
+    translate(val){
+      if(this.currentTtype === 'lmp'){
+
+        let translate =  val.split('|').map(val => {
+          for( let key in keyToCharacter){
+            if( key === val ) {
+              return keyToCharacter[key]
+            }
+          }
+        });
+
+        return translate.join('|');
+      }else {
+        return val;
+      }
+    }
+  },
+  mounted (){
+    this.$parent.tabbarShow = false;
+    this.getOddsData();
+
+  },
+}
+</script>
+
+<style scoped>
+.mint-header {
+  background-color: #57d6dd !important;
+}
+.contanier {
+  padding: 10vw 10px 0;
+  background: #fff;
+  color: #333;
+  font-size: 13px;
+  font-family: pingfang sc regular;
+}
+.bets-counts {
+  line-height: 44px;
+  overflow: hidden;
+}
+.bets-gold {
+  margin-left: 10vw;
+}
+
+.dent-table {
+  width: 100%;
+  border-spacing: 0;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.dent-table th,
+.dent-table td {
+  border: 1px solid #ddd;
+  font-weight: normal;
+}
+.dent-table th {
+  line-height: 28px;
+}
+.dent-table td {
+  height: 44px;
+}
+
+/* 头部 */
+.betView,
+.bets-list {
+  position: absolute;
+  top: 10vw;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #fff;
+}
+.list-item {
+  padding: 0 2.5vw;
+  line-height: 3;
+  border-bottom: 1px solid #f1f1f1;
+}
+.game-name {
+  font-size: 5vw;
+  line-height: 2;
+  color: #57d6dd;
+}
+.game-type {
+  margin-bottom: 2vw;
+  font-size: 4vw;
+  line-height: 2.5;
+}
+.betView-detail {
+  width: 60%;
+  align-items: stretch;
+  line-height: 2;
+}
+</style>

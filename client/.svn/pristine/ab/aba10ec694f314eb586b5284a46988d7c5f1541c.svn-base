@@ -1,0 +1,84 @@
+<template>
+    <div class="contanier flex flow-col">
+    <!-- 头部 -->
+    <header class="dent-header flex justify-sb">
+
+      <span dentHoverclass="hoverclass"
+            @click="$router.go(-1)"
+            class="flex iconfont icon-left click-icon"></span>
+
+      <div class="hecai flex justify-sb">
+
+        <div class="brief flex">
+          <div class="avatar">
+            <img :src="hecaiImg">
+          </div>
+          <div class="brief-info flex flow-col justify-sa">
+            <span class="fz-18 font-theme">
+              北京PK10
+            </span>
+            <span v-if="Object.keys(recentInfo).length"
+                  class="fz-12 fontc-6">第{{nextIssue}}期</span>
+          </div>
+        </div>
+
+        <div class="time-left flex flow-col justify-sa">
+          <span class="fz-18 font-theme">{{timer.timeToOpen}}</span>
+          <span class="fz-12 fontc-3">即将开奖......</span>
+        </div>
+
+      </div>
+
+    </header>
+    </div>
+</template>
+
+<script>
+export default {
+  mounted: function() {
+    this.$parent.tabbarShow = false;    
+  }
+};
+</script>
+
+<style scoped>
+.dent-header {
+  width: 100%;
+  height: 18vw;
+  background: #57d6dd;
+}
+.click-icon {
+  flex: 1;
+  padding-left: 2vw;
+  height: 100%;
+  color: #fff;
+  font-size: 20px;
+}
+.hecai {
+  width: 87.5vw;
+  height: 14vw;
+  background: white;
+  border-top-left-radius: 7vw;
+  border-bottom-left-radius: 7vw;
+}
+.avatar {
+  margin-left: 1vw;
+  margin-right: 2vw;
+  width: 12vw;
+  height: 12vw;
+  border-radius: 50%;
+  background: #e3e5e8;
+  overflow: hidden;
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+}
+.brief {
+  height: 100%;
+}
+.brief-info {
+  align-items: flex-start;
+  height: 100%;
+}
+</style>
